@@ -10,6 +10,66 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Admin auth routes
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { username, password } = req.body as { username?: string; password?: string };
+      if (!username || !password) {
+        return res.status(400).json({ error: "username and password required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user || user.password !== password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // store minimal session info
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (req as any).session = (req as any).session || {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (req as any).session.userId = user.id;
+      } catch (e) {
+        // ignore session set failure
+      }
+
+      res.json({ id: user.id, username: user.username });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  app.post("/api/admin/logout", async (req, res) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const s = (req as any).session;
+      if (s && typeof s.destroy === "function") {
+        s.destroy(() => {
+          res.json({ ok: true });
+        });
+      } else {
+        // clear userId if possible
+        if (s) s.userId = undefined;
+        res.json({ ok: true });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to logout" });
+    }
+  });
+
+  app.get("/api/admin/me", async (req, res) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const s = (req as any).session;
+      const uid = s && s.userId;
+      if (!uid) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByUsername((await storage.getUserByUsername("Admin"))?.username || "");
+      // return minimal info
+      res.json({ id: uid, username: user?.username || "Admin" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
   // Questions API
   app.get("/api/questions", async (req, res) => {
     try {

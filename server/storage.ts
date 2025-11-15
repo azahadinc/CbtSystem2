@@ -7,6 +7,8 @@ import {
   type InsertExamSession,
   type Result,
   type InsertResult,
+  type InsertUser,
+  type User,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -37,6 +39,10 @@ export interface IStorage {
   getResult(id: string): Promise<Result | undefined>;
   getResultBySessionId(sessionId: string): Promise<Result | undefined>;
   createResult(result: InsertResult): Promise<Result>;
+
+  // Users
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
 }
 
 export class MemStorage implements IStorage {
@@ -44,12 +50,14 @@ export class MemStorage implements IStorage {
   private exams: Map<string, Exam>;
   private examSessions: Map<string, ExamSession>;
   private results: Map<string, Result>;
+  private users: Map<string, User>;
 
   constructor() {
     this.questions = new Map();
     this.exams = new Map();
     this.examSessions = new Map();
     this.results = new Map();
+    this.users = new Map();
   }
 
   // Questions
@@ -63,7 +71,16 @@ export class MemStorage implements IStorage {
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
     const id = randomUUID();
-    const question: Question = { ...insertQuestion, id };
+    const question: Question = {
+      id,
+      questionText: insertQuestion.questionText,
+      questionType: insertQuestion.questionType,
+      subject: insertQuestion.subject,
+      difficulty: insertQuestion.difficulty,
+      options: insertQuestion.options ?? null,
+      correctAnswer: insertQuestion.correctAnswer,
+      points: insertQuestion.points,
+    };
     this.questions.set(id, question);
     return question;
   }
@@ -94,9 +111,14 @@ export class MemStorage implements IStorage {
     }
 
     const exam: Exam = {
-      ...insertExam,
       id,
+      title: insertExam.title,
+      description: insertExam.description ?? null,
+      subject: insertExam.subject,
+      duration: insertExam.duration,
       totalPoints,
+      passingScore: insertExam.passingScore,
+      questionIds: insertExam.questionIds,
       isActive: true,
       createdAt: new Date(),
     };
@@ -180,6 +202,25 @@ export class MemStorage implements IStorage {
     this.results.set(id, result);
     return result;
   }
+
+  // Users
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find((u) => u.username === username);
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = randomUUID();
+    const user: User = { ...insertUser, id };
+    this.users.set(id, user);
+    return user;
+  }
 }
 
 export const storage = new MemStorage();
+
+// Seed default admin user (ignore if already exists)
+storage.getUserByUsername("Admin").then((u) => {
+  if (!u) {
+    storage.createUser({ username: "Admin", password: "admin" }).catch(() => {});
+  }
+}).catch(() => {});

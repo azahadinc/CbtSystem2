@@ -14,7 +14,7 @@ export default function Home() {
             </div>
           </div>
           <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
-            Computer-Based Testing System
+            Computer-Based Testing Systems
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Modern examination platform for educational institutions. Take exams
