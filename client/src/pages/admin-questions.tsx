@@ -36,6 +36,15 @@ import { Plus, Trash2, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Question, InsertQuestion } from "@shared/schema";
 import { useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useEffect } from "react";
 
 export default function AdminQuestions() {
@@ -173,6 +182,19 @@ export default function AdminQuestions() {
           >
             Upload CSV
           </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // open CSV help dialog by clicking hidden link
+              const dlg = document.getElementById("csv-help-trigger") as HTMLButtonElement | null;
+              dlg?.click();
+            }}
+          >
+            CSV Help
+          </Button>
+          <a href="/questions-template.csv" download className="inline-block">
+            <Button variant="outline">Download Template</Button>
+          </a>
 
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
@@ -192,6 +214,41 @@ export default function AdminQuestions() {
         </Dialog>
         </div>
       </div>
+      
+      {/* CSV Help Dialog (triggered by CSV Help button) */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <button id="csv-help-trigger" className="hidden">Open CSV Help</button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>CSV Import - Questions</DialogTitle>
+            <DialogDescription>
+              Bulk import questions using a CSV file. You can download a template and edit it in Excel/Sheets.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm">Columns (header optional):</p>
+            <pre className="text-xs bg-muted p-2 rounded">questionText,questionType,subject,difficulty,options,correctAnswer,points</pre>
+            <p className="text-sm">Notes:</p>
+            <ul className="list-disc ml-6 text-sm">
+              <li><b>questionText</b> — required.</li>
+              <li><b>questionType</b> — required: <code>multiple-choice</code>, <code>true-false</code>, <code>short-answer</code>.</li>
+              <li><b>options</b> — for multiple-choice: JSON array string or pipe-separated (e.g. <code>A|B|C|D</code>).</li>
+              <li><b>correctAnswer</b> — required.</li>
+              <li><b>points</b> — integer &gt; 0, defaults to 1.</li>
+            </ul>
+            <div className="pt-2">
+              <a href="/questions-template.csv" download>
+                <Button variant="default">Download Template CSV</Button>
+              </a>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Preview rows and upload controls */}
       {previewRows && previewRows.length > 0 && (
