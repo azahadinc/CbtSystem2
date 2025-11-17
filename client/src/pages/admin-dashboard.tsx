@@ -78,7 +78,7 @@ export default function AdminDashboard() {
       <div>
         <h1 className="mb-2 text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Overview of your CBT system performance and statistics
+          Overview of Faith Immaculate Academy CBT performance and statistics
         </p>
       </div>
 

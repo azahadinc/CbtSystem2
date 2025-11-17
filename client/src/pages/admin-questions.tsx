@@ -220,21 +220,67 @@ export default function AdminQuestions() {
                     <th className="p-2">Subject</th>
                     <th className="p-2">Difficulty</th>
                     <th className="p-2">Points</th>
+                    <th className="p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {previewRows.slice(0, 50).map((r, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="p-2">{r.questionText}</td>
-                      <td className="p-2">{r.questionType}</td>
-                      <td className="p-2">{r.subject}</td>
-                      <td className="p-2">{r.difficulty}</td>
-                      <td className="p-2">{r.points || 1}</td>
-                    </tr>
-                  ))}
+                  {previewRows.slice(0, 200).map((r, idx) => {
+                    const validateRow = (row: any) => {
+                      const errors: string[] = [];
+                      if (!row.questionText || String(row.questionText).trim() === "") errors.push("questionText required");
+                      const types = ["multiple-choice", "true-false", "short-answer"];
+                      if (!types.includes(row.questionType)) errors.push("questionType invalid");
+                      if (!row.subject || String(row.subject).trim() === "") errors.push("subject required");
+                      const diffs = ["easy", "medium", "hard"];
+                      if (!diffs.includes(row.difficulty)) errors.push("difficulty invalid");
+                      if (!row.correctAnswer && row.correctAnswer !== 0) errors.push("correctAnswer required");
+                      if (row.questionType === "multiple-choice") {
+                        if (!Array.isArray(row.options) || row.options.length < 2) errors.push("options must be an array with >=2 items");
+                      }
+                      if (row.points && !(Number(row.points) > 0)) errors.push("points must be a positive number");
+                      return { valid: errors.length === 0, errors };
+                    };
+
+                    const { valid, errors } = validateRow(r);
+
+                    return (
+                      <tr key={idx} className={`border-t ${!valid ? 'bg-yellow-50' : ''}`}>
+                        <td className="p-2">
+                          <input className="w-full rounded border px-2 py-1" value={r.questionText || ''} onChange={(e) => { const copy = [...previewRows]; copy[idx] = { ...copy[idx], questionText: e.target.value }; setPreviewRows(copy); }} />
+                          {!valid && errors.length > 0 && <div className="text-xs text-destructive mt-1">{errors.join(', ')}</div>}
+                        </td>
+                        <td className="p-2">
+                          <select className="rounded border px-2 py-1" value={r.questionType || 'multiple-choice'} onChange={(e) => { const copy = [...previewRows]; copy[idx] = { ...copy[idx], questionType: e.target.value }; setPreviewRows(copy); }}>
+                            <option value="multiple-choice">multiple-choice</option>
+                            <option value="true-false">true-false</option>
+                            <option value="short-answer">short-answer</option>
+                          </select>
+                        </td>
+                        <td className="p-2">
+                          <input className="w-full rounded border px-2 py-1" value={r.subject || ''} onChange={(e) => { const copy = [...previewRows]; copy[idx] = { ...copy[idx], subject: e.target.value }; setPreviewRows(copy); }} />
+                        </td>
+                        <td className="p-2">
+                          <select className="rounded border px-2 py-1" value={r.difficulty || 'medium'} onChange={(e) => { const copy = [...previewRows]; copy[idx] = { ...copy[idx], difficulty: e.target.value }; setPreviewRows(copy); }}>
+                            <option value="easy">easy</option>
+                            <option value="medium">medium</option>
+                            <option value="hard">hard</option>
+                          </select>
+                        </td>
+                        <td className="p-2">
+                          <input type="number" min={1} className="w-24 rounded border px-2 py-1" value={r.points || 1} onChange={(e) => { const copy = [...previewRows]; copy[idx] = { ...copy[idx], points: Number(e.target.value) || 1 }; setPreviewRows(copy); }} />
+                        </td>
+                        <td className="p-2">
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => { const copy = [...previewRows]; copy.splice(idx, 1); setPreviewRows(copy); }}>Remove</Button>
+                            {!valid && <Button size="sm" variant="default" onClick={() => { /* focus or no-op, user edits inline */ }}>Fix</Button>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-              {previewRows.length > 50 && <p className="text-xs text-muted-foreground mt-2">Showing first 50 rows</p>}
+              {previewRows.length > 200 && <p className="text-xs text-muted-foreground mt-2">Showing first 200 rows</p>}
             </div>
           </CardContent>
         </Card>

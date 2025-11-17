@@ -57,7 +57,7 @@ export function AppSidebar() {
               <GraduationCap className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">CBT System</h1>
+              <h1 className="text-lg font-semibold">Faith Immaculate Academy CBT</h1>
               <p className="text-xs text-muted-foreground">Admin Panel</p>
             </div>
           </div>
