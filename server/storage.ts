@@ -238,6 +238,16 @@ export class MemStorage implements IStorage {
     return result;
   }
 
+  // Bulk create questions (useful for imports)
+  async createQuestions(insertQuestions: InsertQuestion[]): Promise<Question[]> {
+    const out: Question[] = [];
+    for (const q of insertQuestions) {
+      const created = await this.createQuestion(q);
+      out.push(created);
+    }
+    return out;
+  }
+
   // Users
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find((u) => u.username === username);

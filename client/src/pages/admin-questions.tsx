@@ -35,6 +35,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Question, InsertQuestion } from "@shared/schema";
+import { useRef } from "react";
+import { useEffect } from "react";
 
 export default function AdminQuestions() {
   const { toast } = useToast();
@@ -44,6 +46,92 @@ export default function AdminQuestions() {
   const { data: questions, isLoading } = useQuery<Question[]>({
     queryKey: ["/api/questions"],
   });
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [previewRows, setPreviewRows] = useState<any[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
+
+  // wire file input change
+  useEffect(() => {
+    const el = document.getElementById("questions-csv") as HTMLInputElement | null;
+    if (!el) return;
+    const onChange = async (e: Event) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const rows: any[] = [];
+      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      if (lines.length === 0) {
+        alert("Empty CSV file");
+        return;
+      }
+      // detect header
+      const headerParts = lines[0].split(",").map((p) => p.trim());
+      const hasHeader = headerParts.some((h) => /question/i.test(h) || /questionText/i.test(h) || /question_text/i.test(h));
+      const startIndex = hasHeader ? 1 : 0;
+      const cols = hasHeader ? headerParts : ["questionText","questionType","subject","difficulty","options","correctAnswer","points"];
+      for (let i = startIndex; i < lines.length; i++) {
+        const parts = lines[i].split(",").map((p) => p.trim());
+        if (parts.length === 0) continue;
+        const obj: any = {};
+        for (let c = 0; c < cols.length; c++) {
+          obj[cols[c]] = parts[c] ?? "";
+        }
+        // normalize options
+        if (obj.options && typeof obj.options === "string") {
+          const v = obj.options;
+          try { obj.options = JSON.parse(v); } catch { obj.options = v.split("|").map((s: string) => s.trim()).filter(Boolean); }
+        }
+        // coerce points
+        if (obj.points) obj.points = Number(obj.points) || 1;
+        rows.push(obj);
+      }
+      setPreviewRows(rows);
+      input.value = "";
+    };
+    el.addEventListener("change", onChange as any);
+    return () => el.removeEventListener("change", onChange as any);
+  }, []);
+
+  const uploadPreview = async (opts?: { chunkSize?: number }) => {
+    const rows = previewRows;
+    if (!rows || rows.length === 0) {
+      alert("No rows to upload");
+      return;
+    }
+    const chunkSize = opts?.chunkSize ?? 100;
+    let uploaded = 0;
+    setUploadProgress({ uploaded, total: rows.length });
+    const errors: any[] = [];
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const chunk = rows.slice(i, i + chunkSize);
+      const resp = await fetch("/api/questions/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chunk),
+      });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        errors.push({ chunkIndex: i / chunkSize, error: txt });
+        continue;
+      }
+      const body = await resp.json();
+      uploaded += body.insertedCount || 0;
+      if (body.errors && body.errors.length) errors.push(...body.errors);
+      setUploadProgress({ uploaded, total: rows.length });
+    }
+    setUploadProgress(null);
+    if (errors.length) {
+      alert(`Upload completed with errors: ${errors.length} issues. Check console.`);
+      // eslint-disable-next-line no-console
+      console.error(errors);
+    } else {
+      alert(`Uploaded ${uploaded} questions`);
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
+    setPreviewRows([]);
+  };
 
   const deleteQuestionMutation = useMutation({
     mutationFn: (questionId: string) =>
@@ -74,7 +162,19 @@ export default function AdminQuestions() {
             Manage your collection of exam questions
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <div className="flex items-center gap-2">
+          <input id="questions-csv" type="file" accept="text/csv" className="hidden" />
+          <Button
+            variant="outline"
+            onClick={() => {
+              const el = document.getElementById("questions-csv") as HTMLInputElement | null;
+              el?.click();
+            }}
+          >
+            Upload CSV
+          </Button>
+
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-question">
               <Plus className="mr-2 h-4 w-4" />
@@ -90,7 +190,55 @@ export default function AdminQuestions() {
             />
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      {/* Preview rows and upload controls */}
+      {previewRows && previewRows.length > 0 && (
+        <Card>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">CSV Preview ({previewRows.length} rows)</h3>
+                <p className="text-sm text-muted-foreground">Review parsed rows below before uploading. Invalid rows will be reported by the server.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => setPreviewRows([])}>
+                  Clear
+                </Button>
+                <Button onClick={() => uploadPreview({ chunkSize: 100 })}>
+                  Upload All
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 overflow-auto">
+              <table className="w-full table-auto text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-muted-foreground">
+                    <th className="p-2">Question</th>
+                    <th className="p-2">Type</th>
+                    <th className="p-2">Subject</th>
+                    <th className="p-2">Difficulty</th>
+                    <th className="p-2">Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.slice(0, 50).map((r, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="p-2">{r.questionText}</td>
+                      <td className="p-2">{r.questionType}</td>
+                      <td className="p-2">{r.subject}</td>
+                      <td className="p-2">{r.difficulty}</td>
+                      <td className="p-2">{r.points || 1}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {previewRows.length > 50 && <p className="text-xs text-muted-foreground mt-2">Showing first 50 rows</p>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filter */}
       {subjects.length > 0 && (

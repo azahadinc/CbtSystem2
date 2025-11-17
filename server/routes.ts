@@ -105,6 +105,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk questions import (accepts JSON array of questions)
+  app.post("/api/questions/bulk", async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!Array.isArray(payload)) {
+        return res.status(400).json({ error: "Expected an array of questions" });
+      }
+
+      const successes: any[] = [];
+      const errors: { row: number; reason: string }[] = [];
+      for (let i = 0; i < payload.length; i++) {
+        const raw = payload[i];
+
+        // Normalize options: allow JSON string or pipe-separated
+        if (raw && typeof raw.options === "string") {
+          try {
+            raw.options = JSON.parse(raw.options);
+          } catch (e) {
+            // try splitting by pipe
+            raw.options = raw.options.split("|").map((p: string) => p.trim()).filter(Boolean);
+          }
+        }
+
+        const parsed = insertQuestionSchema.safeParse(raw);
+        if (!parsed.success) {
+          errors.push({ row: i, reason: JSON.stringify(parsed.error.errors) });
+          continue;
+        }
+
+        successes.push(parsed.data);
+      }
+
+      // Insert valid rows in chunks to avoid huge single inserts
+      const created: any[] = [];
+      const chunkSize = 200;
+      for (let i = 0; i < successes.length; i += chunkSize) {
+        const chunk = successes.slice(i, i + chunkSize);
+        const createdChunk = await storage.createQuestions(chunk as any);
+        created.push(...createdChunk);
+      }
+
+      res.json({ insertedCount: created.length, inserted: created, errors });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to import questions" });
+    }
+  });
+
   app.delete("/api/questions/:id", async (req, res) => {
     try {
       await storage.deleteQuestion(req.params.id);
