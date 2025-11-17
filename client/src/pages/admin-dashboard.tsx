@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, HelpCircle, Users, TrendingUp } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -23,6 +23,23 @@ export default function AdminDashboard() {
   });
 
   const isLoading = examsLoading || questionsLoading || resultsLoading;
+
+  const [studentsList, setStudentsList] = useState<{ id: string; name: string; studentId: string }[]>([]);
+
+  const fetchStudents = async () => {
+    try {
+      const r = await fetch("/api/students");
+      if (!r.ok) return;
+      const data = await r.json();
+      setStudentsList(data || []);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   const stats = {
     totalExams: exams?.length || 0,
@@ -105,10 +122,11 @@ export default function AdminDashboard() {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ name, studentId }),
                     });
-                    if (!resp.ok) throw new Error("Failed to add student");
-                    alert("Student added");
-                    if (nameEl) nameEl.value = "";
-                    if (idEl) idEl.value = "";
+                      if (!resp.ok) throw new Error("Failed to add student");
+                      alert("Student added");
+                      if (nameEl) nameEl.value = "";
+                      if (idEl) idEl.value = "";
+                      fetchStudents();
                   } catch (e) {
                     // eslint-disable-next-line no-console
                     console.error(e);
@@ -151,6 +169,7 @@ export default function AdminDashboard() {
                     if (!resp.ok) throw new Error("Upload failed");
                     alert("Uploaded " + rows.length + " students");
                     input.value = "";
+                    fetchStudents();
                   } catch (err) {
                     // eslint-disable-next-line no-console
                     console.error(err);
@@ -172,6 +191,72 @@ export default function AdminDashboard() {
 
             <div>
               <p className="text-xs text-muted-foreground">CSV format: one student per line, columns "name,studentId". Header row is optional.</p>
+            </div>
+
+            {/* Students table */}
+            <div className="mt-4">
+              <div className="overflow-auto">
+                <table className="w-full table-auto">
+                  <thead>
+                    <tr className="text-left text-sm text-muted-foreground">
+                      <th className="p-2">Name</th>
+                      <th className="p-2">Student ID</th>
+                      <th className="p-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {studentsList.map((s) => (
+                      <tr key={s.id} className="border-t">
+                        <td className="p-2">{s.name}</td>
+                        <td className="p-2">{s.studentId}</td>
+                        <td className="p-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              const newName = prompt("Edit name", s.name) || s.name;
+                              const newSid = prompt("Edit student id", s.studentId) || s.studentId;
+                              try {
+                                const resp = await fetch(`/api/students/${s.id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ name: newName, studentId: newSid }),
+                                });
+                                if (!resp.ok) throw new Error("Update failed");
+                                fetchStudents();
+                              } catch (e) {
+                                // eslint-disable-next-line no-console
+                                console.error(e);
+                                alert("Failed to update student");
+                              }
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={async () => {
+                              if (!confirm(`Delete ${s.name}?`)) return;
+                              try {
+                                const resp = await fetch(`/api/students/${s.id}`, { method: "DELETE" });
+                                if (!resp.ok && resp.status !== 204) throw new Error("Delete failed");
+                                fetchStudents();
+                              } catch (e) {
+                                // eslint-disable-next-line no-console
+                                console.error(e);
+                                alert("Failed to delete student");
+                              }
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </CardContent>

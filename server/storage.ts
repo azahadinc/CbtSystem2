@@ -11,6 +11,8 @@ import {
   type User,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
 
 // Local student types (kept here to avoid changing shared/schema for now)
 export type Student = {
@@ -59,6 +61,8 @@ export interface IStorage {
   getStudents(): Promise<Student[]>;
   createStudent(student: InsertStudent): Promise<Student>;
   createStudents(students: InsertStudent[]): Promise<Student[]>;
+  updateStudent(id: string, data: Partial<Student>): Promise<Student | undefined>;
+  deleteStudent(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -76,6 +80,19 @@ export class MemStorage implements IStorage {
     this.results = new Map();
     this.users = new Map();
     this.students = new Map();
+    // load persisted students from disk (simple JSON persistence for prototyping)
+    try {
+      const dataDir = path.join(process.cwd(), "server", "data");
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      const file = path.join(dataDir, "students.json");
+      if (fs.existsSync(file)) {
+        const txt = fs.readFileSync(file, "utf8");
+        const arr = JSON.parse(txt) as Student[];
+        for (const s of arr || []) this.students.set(s.id, s);
+      }
+    } catch (e) {
+      // ignore load errors
+    }
   }
 
   // Questions
@@ -242,6 +259,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const student: Student = { id, name: insertStudent.name, studentId: insertStudent.studentId };
     this.students.set(id, student);
+    this.saveStudentsToDisk();
     return student;
   }
 
@@ -251,7 +269,33 @@ export class MemStorage implements IStorage {
       const created = await this.createStudent(s);
       out.push(created);
     }
+    this.saveStudentsToDisk();
     return out;
+  }
+
+  async updateStudent(id: string, data: Partial<Student>): Promise<Student | undefined> {
+    const existing = this.students.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...data };
+    this.students.set(id, updated);
+    this.saveStudentsToDisk();
+    return updated;
+  }
+
+  async deleteStudent(id: string): Promise<void> {
+    this.students.delete(id);
+    this.saveStudentsToDisk();
+  }
+
+  private saveStudentsToDisk() {
+    try {
+      const dataDir = path.join(process.cwd(), "server", "data");
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      const file = path.join(dataDir, "students.json");
+      fs.writeFileSync(file, JSON.stringify(Array.from(this.students.values()), null, 2), "utf8");
+    } catch (e) {
+      // ignore write errors
+    }
   }
 }
 

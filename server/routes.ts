@@ -365,6 +365,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/students/:id", async (req, res) => {
+    try {
+      const id = req.params.id;
+      const data = req.body as { name?: string; studentId?: string };
+      const updated = await storage.updateStudent(id, data as any);
+      if (!updated) return res.status(404).json({ error: "Student not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update student" });
+    }
+  });
+
+  app.delete("/api/students/:id", async (req, res) => {
+    try {
+      const id = req.params.id;
+      await storage.deleteStudent(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
