@@ -12,6 +12,18 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
+// Local student types (kept here to avoid changing shared/schema for now)
+export type Student = {
+  id: string;
+  name: string;
+  studentId: string;
+};
+
+export type InsertStudent = {
+  name: string;
+  studentId: string;
+};
+
 export interface IStorage {
   // Questions
   getQuestions(): Promise<Question[]>;
@@ -43,6 +55,10 @@ export interface IStorage {
   // Users
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  // Students
+  getStudents(): Promise<Student[]>;
+  createStudent(student: InsertStudent): Promise<Student>;
+  createStudents(students: InsertStudent[]): Promise<Student[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -51,6 +67,7 @@ export class MemStorage implements IStorage {
   private examSessions: Map<string, ExamSession>;
   private results: Map<string, Result>;
   private users: Map<string, User>;
+  private students: Map<string, Student>;
 
   constructor() {
     this.questions = new Map();
@@ -58,6 +75,7 @@ export class MemStorage implements IStorage {
     this.examSessions = new Map();
     this.results = new Map();
     this.users = new Map();
+    this.students = new Map();
   }
 
   // Questions
@@ -213,6 +231,27 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
+  }
+
+  // Students
+  async getStudents(): Promise<Student[]> {
+    return Array.from(this.students.values());
+  }
+
+  async createStudent(insertStudent: InsertStudent): Promise<Student> {
+    const id = randomUUID();
+    const student: Student = { id, name: insertStudent.name, studentId: insertStudent.studentId };
+    this.students.set(id, student);
+    return student;
+  }
+
+  async createStudents(insertStudents: InsertStudent[]): Promise<Student[]> {
+    const out: Student[] = [];
+    for (const s of insertStudents) {
+      const created = await this.createStudent(s);
+      out.push(created);
+    }
+    return out;
   }
 }
 

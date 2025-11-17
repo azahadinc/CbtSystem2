@@ -326,6 +326,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Students API - simple in-memory student management
+  app.get("/api/students", async (req, res) => {
+    try {
+      const students = await storage.getStudents();
+      res.json(students);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
+  app.post("/api/students", async (req, res) => {
+    try {
+      const payload = req.body;
+
+      if (Array.isArray(payload)) {
+        // array of {name, studentId}
+        const rows = payload as { name?: string; studentId?: string }[];
+        const toCreate = rows
+          .filter((r) => r && r.name && r.studentId)
+          .map((r) => ({ name: r.name as string, studentId: r.studentId as string }));
+        const created = await storage.createStudents(toCreate);
+        return res.status(201).json(created);
+      }
+
+      if (payload && typeof payload === "object") {
+        const { name, studentId } = payload as { name?: string; studentId?: string };
+        if (!name || !studentId) {
+          return res.status(400).json({ error: "name and studentId required" });
+        }
+        const created = await storage.createStudent({ name, studentId });
+        return res.status(201).json(created);
+      }
+
+      res.status(400).json({ error: "Invalid payload" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create students" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
