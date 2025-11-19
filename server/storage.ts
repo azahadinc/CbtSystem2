@@ -81,8 +81,11 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.students = new Map();
     // load persisted students from disk (simple JSON persistence for prototyping)
+    // Vercel has a read-only filesystem, except for /tmp.
+    const dataDir = process.env.VERCEL
+      ? path.join("/tmp")
+      : path.join(process.cwd(), "server", "data");
     try {
-      const dataDir = path.join(process.cwd(), "server", "data");
       if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
       const file = path.join(dataDir, "students.json");
       if (fs.existsSync(file)) {
@@ -299,7 +302,9 @@ export class MemStorage implements IStorage {
 
   private saveStudentsToDisk() {
     try {
-      const dataDir = path.join(process.cwd(), "server", "data");
+      const dataDir = process.env.VERCEL
+        ? path.join("/tmp")
+        : path.join(process.cwd(), "server", "data");
       if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
       const file = path.join(dataDir, "students.json");
       fs.writeFileSync(file, JSON.stringify(Array.from(this.students.values()), null, 2), "utf8");
