@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,22 +35,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Question, InsertQuestion } from "@shared/schema";
-import { useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { useEffect } from "react";
+// consolidated React hooks and removed duplicated Dialog import above
 
 export default function AdminQuestions() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [filterSubject, setFilterSubject] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: questions, isLoading } = useQuery<Question[]>({
     queryKey: ["/api/questions"],
@@ -154,6 +145,20 @@ export default function AdminQuestions() {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => apiRequest("DELETE", `/api/questions/${id}`, {})));
+    },
+    onSuccess: (_data, ids) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
+      setSelectedIds(new Set());
+      toast({ title: "Questions deleted", description: `Deleted ${ids?.length || 0} question(s)` });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete questions", variant: "destructive" });
+    },
+  });
+
   const subjects = questions
     ? Array.from(new Set(questions.map((q) => q.subject)))
     : [];
@@ -195,6 +200,29 @@ export default function AdminQuestions() {
           <a href="/questions-template.csv" download className="inline-block">
             <Button variant="outline">Download Template</Button>
           </a>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              const ids = Array.from(selectedIds);
+              if (ids.length === 0) return toast({ title: "No selection", description: "Select questions to delete" });
+              if (!confirm(`Delete ${ids.length} selected question(s)? This cannot be undone.`)) return;
+              bulkDeleteMutation.mutate(ids);
+            }}
+            disabled={selectedIds.size === 0}
+          >
+            Delete Selected
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (!questions || questions.length === 0) return toast({ title: "No questions", description: "There are no questions to delete" });
+              if (!confirm(`Delete ALL ${questions.length} question(s)? This cannot be undone.`)) return;
+              bulkDeleteMutation.mutate(questions.map((q) => q.id));
+            }}
+            disabled={!questions || questions.length === 0}
+          >
+            Delete All
+          </Button>
 
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
@@ -384,6 +412,21 @@ export default function AdminQuestions() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <input
+                    type="checkbox"
+                    aria-label="select-all-questions"
+                    checked={filteredQuestions && selectedIds.size === (filteredQuestions?.length || 0) && filteredQuestions.length > 0}
+                    onChange={(e) => {
+                      if (!filteredQuestions) return;
+                      if (e.currentTarget.checked) {
+                        setSelectedIds(new Set(filteredQuestions.map((q) => q.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                  />
+                </TableHead>
                 <TableHead className="w-1/2">Question</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Subject</TableHead>
@@ -395,6 +438,19 @@ export default function AdminQuestions() {
             <TableBody>
               {filteredQuestions.map((question) => (
                 <TableRow key={question.id} data-testid={`row-question-${question.id}`}>
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      aria-label={`select-question-${question.id}`}
+                      checked={selectedIds.has(question.id)}
+                      onChange={(e) => {
+                        const next = new Set(selectedIds);
+                        if (e.currentTarget.checked) next.add(question.id);
+                        else next.delete(question.id);
+                        setSelectedIds(next);
+                      }}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">
                     {question.questionText}
                   </TableCell>

@@ -214,6 +214,10 @@ function ExamForm({
     formData.subject ? q.subject === formData.subject : true
   );
 
+  const selectAllQuestions = () => {
+    setFormData((prev) => ({ ...prev, questionIds: (questions || []).map((q) => q.id) }));
+  };
+
   const createExamMutation = useMutation({
     mutationFn: (data: typeof formData) => apiRequest("POST", "/api/exams", data),
     onSuccess: () => {
@@ -338,7 +342,12 @@ function ExamForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Select Questions *</Label>
+          <div className="flex items-center justify-between">
+            <Label>Select Questions *</Label>
+            <div>
+              <Button variant="ghost" size="sm" onClick={selectAllQuestions} data-testid="button-select-all-questions">Select All</Button>
+            </div>
+          </div>
           <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-4">
             {availableQuestions.length > 0 ? (
               availableQuestions.map((question) => (

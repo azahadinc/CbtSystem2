@@ -2,6 +2,24 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { GraduationCap, UserCircle, Shield } from "lucide-react";
+import { useState } from "react";
+
+function HeaderLogo() {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <>
+      <img
+        src="/graphic1.jpg"
+        alt="Logo"
+        className={`h-16 w-16 object-contain ${imageLoaded ? "" : "hidden"}`}
+        onLoad={() => setImageLoaded(true)}
+        onError={() => setImageLoaded(false)}
+      />
+      {!imageLoaded && <GraduationCap className="h-12 w-12" />}
+    </>
+  );
+}
 
 export default function Home() {
   return (
@@ -9,12 +27,12 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16">
         <div className="mb-16 text-center">
           <div className="mb-6 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <GraduationCap className="h-12 w-12" />
+            <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-primary/10 text-primary-foreground">
+              <HeaderLogo />
             </div>
           </div>
           <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
-            Computer-Based Testing Systems
+            Faith Immaculate Academy CBT System
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
             Modern examination platform for educational institutions. Take exams

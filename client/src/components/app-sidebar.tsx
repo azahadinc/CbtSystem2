@@ -6,6 +6,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -52,15 +53,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-6">
         <Link href="/admin">
-          <div className="flex items-center gap-2" data-testid="link-logo">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GraduationCap className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold">Faith Immaculate Academy CBT</h1>
-              <p className="text-xs text-muted-foreground">Admin Panel</p>
-            </div>
-          </div>
+          <LogoSlot />
         </Link>
       </SidebarHeader>
       <SidebarContent>
@@ -87,5 +80,30 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+function LogoSlot() {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <div className="flex items-center gap-2" data-testid="link-logo">
+      <div className="relative h-10 w-10 rounded-md bg-primary text-primary-foreground overflow-hidden">
+        <GraduationCap className={`absolute inset-0 m-auto h-6 w-6 ${imageLoaded ? "opacity-0" : "opacity-100"}`} />
+        <img
+          src="/graphic1.jpg"
+          alt="Logo"
+          className={`absolute inset-0 h-full w-full object-cover ${imageLoaded ? "" : "hidden"}`}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageLoaded(false)}
+        />
+      </div>
+      {!imageLoaded && (
+        <div>
+          <h1 className="text-lg font-semibold">Faith Immaculate Academy CBT</h1>
+          <p className="text-xs text-muted-foreground">Admin Panel</p>
+        </div>
+      )}
+    </div>
   );
 }

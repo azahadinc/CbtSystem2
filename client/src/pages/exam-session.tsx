@@ -38,7 +38,15 @@ export default function ExamSessionPage() {
 
   const { data: session, isLoading: sessionLoading } = useQuery<ExamSession>({
     queryKey: ["/api/exam-sessions", sessionId],
+    enabled: !!sessionId,
   });
+
+  useEffect(() => {
+    if (!sessionId || sessionId === "undefined") {
+      // If there's no sessionId in the route, redirect back to exams list
+      setLocation("/");
+    }
+  }, [sessionId, setLocation]);
 
   const { data: exam } = useQuery<Exam>({
     queryKey: ["/api/exams", examId],

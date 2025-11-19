@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Clock, BookOpen, AlertTriangle, CheckCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Exam, ExamSession } from "@shared/schema";
 
 export default function ExamStart() {
@@ -24,14 +25,20 @@ export default function ExamStart() {
 
   const startExamMutation = useMutation({
     mutationFn: async () => {
-      const session = await apiRequest<ExamSession>("POST", "/api/exam-sessions", {
+      const res = await apiRequest("POST", "/api/exam-sessions", {
         examId,
         studentName,
         studentId,
       });
-      return session;
+      const session = await res.json();
+      return session as ExamSession;
     },
     onSuccess: (session) => {
+      if (!session || !session.id) {
+        // defensive: session id missing — show toast and do not redirect to invalid route
+        toast({ title: "Failed to start session", description: "Server did not return a valid session id." });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/exam-sessions"] });
       setLocation(`/exam/${examId}/session/${session.id}`);
     },
