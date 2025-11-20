@@ -104,6 +104,7 @@ export default function AdminExams() {
               <TableRow>
                 <TableHead>Exam Title</TableHead>
                 <TableHead>Subject</TableHead>
+                <TableHead>Class Level</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Questions</TableHead>
                 <TableHead>Status</TableHead>
@@ -116,6 +117,9 @@ export default function AdminExams() {
                   <TableCell className="font-medium">{exam.title}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{exam.subject}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{exam.classLevel}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -208,12 +212,14 @@ function ExamForm({
     duration: 60,
     passingScore: 60,
     questionIds: [] as string[],
+    classLevel: "JSS1",
   });
   const [useSubjectSelectionLogic, setUseSubjectSelectionLogic] = useState(false);
   const [assignRandomQuestions, setAssignRandomQuestions] = useState(false);
 
   const availableQuestions = questions.filter((q) =>
-    formData.subject ? q.subject === formData.subject : true
+    (formData.subject ? q.subject === formData.subject : true) &&
+    (formData.classLevel ? q.classLevel === formData.classLevel : true)
   );
 
   const selectAllQuestions = () => {
@@ -269,6 +275,30 @@ function ExamForm({
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-6 py-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="classLevel">Class Level *</Label>
+            <select
+              id="classLevel"
+              value={formData.classLevel}
+              onChange={e => setFormData({ ...formData, classLevel: e.target.value })}
+              required
+              className="border rounded px-2 py-1 w-full"
+              data-testid="select-exam-class-level"
+            >
+              <option value="JSS1">JSS1</option>
+              <option value="JSS2">JSS2</option>
+              <option value="JSS3">JSS3</option>
+              <option value="SS1">SS1</option>
+              <option value="SS2">SS2</option>
+              <option value="SS3">SS3</option>
+              <option value="WAEC">WAEC</option>
+              <option value="NECO">NECO</option>
+              <option value="GCE WAEC">GCE WAEC</option>
+              <option value="GCE NECO">GCE NECO</option>
+            </select>
+          </div>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="title">Exam Title *</Label>
           <Input
@@ -299,16 +329,19 @@ function ExamForm({
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="subject">Subject *</Label>
-            <Input
+            <select
               id="subject"
-              placeholder="e.g., Mathematics"
               value={formData.subject}
-              onChange={(e) =>
-                setFormData({ ...formData, subject: e.target.value })
-              }
+              onChange={e => setFormData({ ...formData, subject: e.target.value })}
               required
-              data-testid="input-exam-subject"
-            />
+              className="border rounded px-2 py-1 w-full"
+              data-testid="select-exam-subject"
+            >
+              <option value="">Select Subject</option>
+              {Array.from(new Set(questions.map(q => q.subject))).map(subject => (
+                <option key={subject} value={subject}>{subject}</option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2">

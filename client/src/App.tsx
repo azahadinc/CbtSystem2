@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AdminLayout } from "@/components/admin-layout";
+import AdminExamDetails from "@/pages/admin-exam-details";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import StudentPortal from "@/pages/student-portal";
@@ -36,6 +37,11 @@ function Router() {
       <Route path="/admin/exams">
         <AdminLayout>
           <AdminExams />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/exams/:id">
+        <AdminLayout>
+          <AdminExamDetails />
         </AdminLayout>
       </Route>
       <Route path="/admin/questions">

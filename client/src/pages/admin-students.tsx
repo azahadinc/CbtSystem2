@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export default function AdminStudents() {
-  const [studentsList, setStudentsList] = useState<{ id: string; name: string; studentId: string }[]>([]);
+  const [studentsList, setStudentsList] = useState<{ id: string; name: string; studentId: string; classLevel?: string; sex?: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchStudents = async () => {
@@ -48,7 +48,7 @@ export default function AdminStudents() {
               Add a student manually or upload a CSV with columns "name,studentId".
             </p>
 
-            <div className="grid gap-2 md:grid-cols-3">
+            <div className="grid gap-2 md:grid-cols-5">
               <div className="col-span-2">
                 <label className="mb-1 block text-sm font-medium">Name</label>
                 <Input id="student-name" placeholder="Student name" />
@@ -57,6 +57,30 @@ export default function AdminStudents() {
                 <label className="mb-1 block text-sm font-medium">Student ID</label>
                 <Input id="student-id" placeholder="student-123" />
               </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Class Level</label>
+                <select id="student-class-level" className="border rounded px-2 py-1 w-full">
+                  <option value="">Select</option>
+                  <option value="JSS1">JSS1</option>
+                  <option value="JSS2">JSS2</option>
+                  <option value="JSS3">JSS3</option>
+                  <option value="SS1">SS1</option>
+                  <option value="SS2">SS2</option>
+                  <option value="SS3">SS3</option>
+                  <option value="WAEC">WAEC</option>
+                  <option value="NECO">NECO</option>
+                  <option value="GCE WAEC">GCE WAEC</option>
+                  <option value="GCE NECO">GCE NECO</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Sex</label>
+                <select id="student-sex" className="border rounded px-2 py-1 w-full">
+                  <option value="">Select</option>
+                  <option value="M">M</option>
+                  <option value="F">F</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -64,10 +88,14 @@ export default function AdminStudents() {
                 onClick={async () => {
                   const nameEl = document.getElementById("student-name") as HTMLInputElement | null;
                   const idEl = document.getElementById("student-id") as HTMLInputElement | null;
+                  const classLevelEl = document.getElementById("student-class-level") as HTMLSelectElement | null;
+                  const sexEl = document.getElementById("student-sex") as HTMLSelectElement | null;
                   const name = nameEl?.value?.trim();
                   const studentId = idEl?.value?.trim();
-                  if (!name || !studentId) {
-                    alert("Please provide both name and student id");
+                  const classLevel = classLevelEl?.value || "";
+                  const sex = sexEl?.value || "";
+                  if (!name || !studentId || !classLevel || !sex) {
+                    alert("Please provide name, student id, class level, and sex");
                     return;
                   }
 
@@ -75,12 +103,14 @@ export default function AdminStudents() {
                     const resp = await fetch("/api/students", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ name, studentId }),
+                      body: JSON.stringify({ name, studentId, classLevel, sex }),
                     });
                       if (!resp.ok) throw new Error("Failed to add student");
                       alert("Student added");
                       if (nameEl) nameEl.value = "";
                       if (idEl) idEl.value = "";
+                      if (classLevelEl) classLevelEl.value = "";
+                      if (sexEl) sexEl.value = "";
                       fetchStudents();
                   } catch (e) {
                     // eslint-disable-next-line no-console
@@ -104,13 +134,13 @@ export default function AdminStudents() {
                   try {
                     const text = await file.text();
                     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-                    const rows: { name?: string; studentId?: string }[] = [];
+                    const rows: { name?: string; studentId?: string; classLevel?: string; sex?: string }[] = [];
                     for (let i = 0; i < lines.length; i++) {
                       const parts = lines[i].split(",").map((p) => p.trim());
-                      if (parts.length < 2) continue;
+                      if (parts.length < 4) continue;
                       // skip header if it looks like header
-                      if (i === 0 && /name/i.test(parts[0]) && /student/i.test(parts[1])) continue;
-                      rows.push({ name: parts[0], studentId: parts[1] });
+                      if (i === 0 && /name/i.test(parts[0]) && /student/i.test(parts[1]) && /class/i.test(parts[2]) && /sex/i.test(parts[3])) continue;
+                      rows.push({ name: parts[0], studentId: parts[1], classLevel: parts[2], sex: parts[3] });
                     }
                     if (rows.length === 0) {
                       alert("No valid rows found in CSV");
@@ -147,7 +177,7 @@ export default function AdminStudents() {
                 variant="outline"
                 onClick={() => {
                   // Download CSV template
-                  const csvContent = 'name,studentId\nJohn Doe,student-001\nJane Smith,student-002';
+                  const csvContent = 'name,studentId,classLevel,sex\nJohn Doe,student-001,JSS1,M\nJane Smith,student-002,SS2,F';
                   const blob = new Blob([csvContent], { type: 'text/csv' });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
@@ -164,8 +194,8 @@ export default function AdminStudents() {
                 variant="outline"
                 onClick={() => {
                   // Export all students as CSV
-                  const header = 'name,studentId';
-                  const rows = studentsList.map(s => `${s.name},${s.studentId}`).join('\n');
+                  const header = 'name,studentId,classLevel,sex';
+                  const rows = studentsList.map(s => `${s.name},${s.studentId},${s.classLevel || ""},${s.sex || ""}`).join('\n');
                   const csvContent = `${header}\n${rows}`;
                   const blob = new Blob([csvContent], { type: 'text/csv' });
                   const url = URL.createObjectURL(blob);
@@ -203,6 +233,8 @@ export default function AdminStudents() {
                     <tr className="text-left text-sm text-muted-foreground">
                       <th className="p-2">Name</th>
                       <th className="p-2">Student ID</th>
+                      <th className="p-2">Class Level</th>
+                      <th className="p-2">Sex</th>
                       <th className="p-2">Actions</th>
                     </tr>
                   </thead>
@@ -211,6 +243,8 @@ export default function AdminStudents() {
                       <tr key={s.id} className="border-t">
                         <td className="p-2">{s.name}</td>
                         <td className="p-2">{s.studentId}</td>
+                        <td className="p-2">{s.classLevel || "-"}</td>
+                        <td className="p-2">{s.sex || "-"}</td>
                         <td className="p-2">
                           <Button
                             size="sm"
@@ -218,11 +252,13 @@ export default function AdminStudents() {
                             onClick={async () => {
                               const newName = prompt("Edit name", s.name) || s.name;
                               const newSid = prompt("Edit student id", s.studentId) || s.studentId;
+                              const newClassLevel = prompt("Edit class level", s.classLevel || "") || s.classLevel;
+                              const newSex = prompt("Edit sex (M/F)", s.sex || "") || s.sex;
                               try {
                                 const resp = await fetch(`/api/students/${s.id}`, {
                                   method: "PATCH",
                                   headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ name: newName, studentId: newSid }),
+                                  body: JSON.stringify({ name: newName, studentId: newSid, classLevel: newClassLevel, sex: newSex }),
                                 });
                                 if (!resp.ok) throw new Error("Update failed");
                                 fetchStudents();
@@ -257,7 +293,7 @@ export default function AdminStudents() {
                             size="sm"
                             variant="secondary"
                             onClick={() => {
-                              alert(`Student Details:\nName: ${s.name}\nStudent ID: ${s.studentId}`);
+                              alert(`Student Details:\nName: ${s.name}\nStudent ID: ${s.studentId}\nClass Level: ${s.classLevel || "-"}\nSex: ${s.sex || "-"}`);
                             }}
                           >
                             View Details

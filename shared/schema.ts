@@ -8,6 +8,10 @@ export const questionTypes = ["multiple-choice", "true-false", "short-answer"] a
 export const difficultyLevels = ["easy", "medium", "hard"] as const;
 
 // Questions Table
+export const classLevels = [
+  "JSS1", "JSS2", "JSS3", "SS1", "SS2", "SS3", "WAEC", "NECO", "GCE WAEC", "GCE NECO"
+] as const;
+
 export const questions = pgTable("questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   questionText: text("question_text").notNull(),
@@ -17,6 +21,7 @@ export const questions = pgTable("questions", {
   options: jsonb("options").$type<string[]>(),
   correctAnswer: text("correct_answer").notNull(),
   points: integer("points").notNull().default(1),
+  classLevel: text("class_level").notNull(),
 });
 
 export const insertQuestionSchema = createInsertSchema(questions).omit({
@@ -26,6 +31,7 @@ export const insertQuestionSchema = createInsertSchema(questions).omit({
   difficulty: z.enum(difficultyLevels),
   options: z.array(z.string()).optional(),
   points: z.number().min(1).default(1),
+  classLevel: z.enum(classLevels),
 });
 
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
@@ -41,6 +47,7 @@ export const exams = pgTable("exams", {
   totalPoints: integer("total_points").notNull(),
   passingScore: integer("passing_score").notNull(),
   questionIds: jsonb("question_ids").$type<string[]>().notNull(),
+  classLevel: text("class_level").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
@@ -53,6 +60,7 @@ export const insertExamSchema = createInsertSchema(exams).omit({
   duration: z.number().min(1),
   passingScore: z.number().min(0).max(100),
   questionIds: z.array(z.string()).min(1),
+  classLevel: z.enum(classLevels),
 });
 
 export type InsertExam = z.infer<typeof insertExamSchema>;
@@ -108,6 +116,23 @@ export const insertResultSchema = createInsertSchema(results).omit({
 
 export type InsertResult = z.infer<typeof insertResultSchema>;
 export type Result = typeof results.$inferSelect;
+
+// Keep existing users table for potential future auth
+export const students = pgTable("students", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  studentId: text("student_id").notNull().unique(),
+  classLevel: text("class_level").notNull(),
+});
+
+export const insertStudentSchema = createInsertSchema(students).omit({
+  id: true,
+}).extend({
+  classLevel: z.enum(classLevels),
+});
+
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+export type Student = typeof students.$inferSelect;
 
 // Keep existing users table for potential future auth
 export const users = pgTable("users", {

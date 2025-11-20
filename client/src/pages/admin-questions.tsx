@@ -49,6 +49,8 @@ export default function AdminQuestions() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
+  const [csvClassLevel, setCsvClassLevel] = useState<string>("");
+  const [showClassLevelDialog, setShowClassLevelDialog] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
 
   // wire file input change
@@ -87,7 +89,9 @@ export default function AdminQuestions() {
         if (obj.points) obj.points = Number(obj.points) || 1;
         rows.push(obj);
       }
+      // Show class level dialog before setting preview rows
       setPreviewRows(rows);
+      setShowClassLevelDialog(true);
       input.value = "";
     };
     el.addEventListener("change", onChange as any);
@@ -95,10 +99,14 @@ export default function AdminQuestions() {
   }, []);
 
   const uploadPreview = async (opts?: { chunkSize?: number }) => {
-    const rows = previewRows;
+    let rows = previewRows;
     if (!rows || rows.length === 0) {
       alert("No rows to upload");
       return;
+    }
+    // Assign selected class level to all rows
+    if (csvClassLevel) {
+      rows = rows.map(row => ({ ...row, classLevel: csvClassLevel }));
     }
     const chunkSize = opts?.chunkSize ?? 100;
     let uploaded = 0;
@@ -131,6 +139,8 @@ export default function AdminQuestions() {
     }
     queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
     setPreviewRows([]);
+    setCsvClassLevel("");
+    setShowClassLevelDialog(false);
   };
 
   const deleteQuestionMutation = useMutation({
@@ -278,8 +288,54 @@ export default function AdminQuestions() {
         </DialogContent>
       </Dialog>
 
+      {/* CSV Class Level Dialog */}
+      {showClassLevelDialog && (
+        <Dialog open={showClassLevelDialog} onOpenChange={setShowClassLevelDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Select Class Level for Uploaded Questions</DialogTitle>
+              <DialogDescription>
+                Please select the class level that applies to all questions in this CSV upload.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Label htmlFor="csv-class-level">Class Level *</Label>
+              <select
+                id="csv-class-level"
+                value={csvClassLevel}
+                onChange={e => setCsvClassLevel(e.target.value)}
+                className="border rounded px-2 py-1 w-full"
+              >
+                <option value="">Select Class Level</option>
+                <option value="JSS1">JSS1</option>
+                <option value="JSS2">JSS2</option>
+                <option value="JSS3">JSS3</option>
+                <option value="SS1">SS1</option>
+                <option value="SS2">SS2</option>
+                <option value="SS3">SS3</option>
+                <option value="WAEC">WAEC</option>
+                <option value="NECO">NECO</option>
+                <option value="GCE WAEC">GCE WAEC</option>
+                <option value="GCE NECO">GCE NECO</option>
+              </select>
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    if (!csvClassLevel) return alert("Please select a class level.");
+                    setShowClassLevelDialog(false);
+                  }}
+                  disabled={!csvClassLevel}
+                >
+                  Confirm
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Preview rows and upload controls */}
-      {previewRows && previewRows.length > 0 && (
+      {previewRows && previewRows.length > 0 && !showClassLevelDialog && (
         <Card>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -516,7 +572,7 @@ export default function AdminQuestions() {
 
 function QuestionForm({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
-  const [formData, setFormData] = useState<InsertQuestion>({
+  const [formData, setFormData] = useState<InsertQuestion & { classLevel?: string }>({
     questionText: "",
     questionType: "multiple-choice",
     subject: "",
@@ -524,6 +580,7 @@ function QuestionForm({ onSuccess }: { onSuccess: () => void }) {
     options: ["", "", "", ""],
     correctAnswer: "",
     points: 1,
+    classLevel: "JSS1",
   });
 
   const createQuestionMutation = useMutation({
@@ -608,7 +665,7 @@ function QuestionForm({ onSuccess }: { onSuccess: () => void }) {
           />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="questionType">Question Type *</Label>
             <Select
@@ -640,6 +697,32 @@ function QuestionForm({ onSuccess }: { onSuccess: () => void }) {
               required
               data-testid="input-question-subject"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="classLevel">Class Level *</Label>
+            <Select
+              value={formData.classLevel}
+              onValueChange={(value: any) =>
+                setFormData({ ...formData, classLevel: value })
+              }
+            >
+              <SelectTrigger data-testid="select-class-level">
+                <SelectValue placeholder="Select class level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="JSS1">JSS1</SelectItem>
+                <SelectItem value="JSS2">JSS2</SelectItem>
+                <SelectItem value="JSS3">JSS3</SelectItem>
+                <SelectItem value="SS1">SS1</SelectItem>
+                <SelectItem value="SS2">SS2</SelectItem>
+                <SelectItem value="SS3">SS3</SelectItem>
+                <SelectItem value="WAEC">WAEC</SelectItem>
+                <SelectItem value="NECO">NECO</SelectItem>
+                <SelectItem value="GCE WAEC">GCE WAEC</SelectItem>
+                <SelectItem value="GCE NECO">GCE NECO</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
