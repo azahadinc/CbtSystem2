@@ -360,7 +360,7 @@ export default function ExamSessionPage() {
                     onClick={() => handleNavigate(idx)}
                     className={`relative h-10 w-10 p-0 ${
                       answers[q.id]
-                        ? "border-primary"
+                        ? "bg-green-500 text-white border-green-600"
                         : ""
                     }`}
                     data-testid={`button-nav-${idx}`}
