@@ -44,6 +44,12 @@ const menuItems = [
     icon: BarChart3,
     testId: "link-results",
   },
+  {
+    title: "Students",
+    url: "/admin/students",
+    icon: GraduationCap,
+    testId: "link-students",
+  },
 ];
 
 export function AppSidebar() {

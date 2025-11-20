@@ -135,6 +135,42 @@ export default function AdminStudents() {
               >
                 Upload CSV
               </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Download CSV template
+                  const csvContent = 'name,studentId\nJohn Doe,student-001\nJane Smith,student-002';
+                  const blob = new Blob([csvContent], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'students-template.csv';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download CSV Template
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Export all students as CSV
+                  const header = 'name,studentId';
+                  const rows = studentsList.map(s => `${s.name},${s.studentId}`).join('\n');
+                  const csvContent = `${header}\n${rows}`;
+                  const blob = new Blob([csvContent], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'students-export.csv';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Export Students
+              </Button>
             </div>
 
             <div>
@@ -198,6 +234,26 @@ export default function AdminStudents() {
                             }}
                           >
                             Delete
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              alert(`Student Details:\nName: ${s.name}\nStudent ID: ${s.studentId}`);
+                            }}
+                          >
+                            View Details
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              if (!confirm(`Reset password for ${s.name}?`)) return;
+                              // Placeholder: Implement actual reset logic as needed
+                              alert(`Password reset link sent to ${s.name}`);
+                            }}
+                          >
+                            Reset Password
                           </Button>
                         </td>
                       </tr>

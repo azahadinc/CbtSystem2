@@ -209,6 +209,8 @@ function ExamForm({
     passingScore: 60,
     questionIds: [] as string[],
   });
+  const [useSubjectSelectionLogic, setUseSubjectSelectionLogic] = useState(false);
+  const [assignRandomQuestions, setAssignRandomQuestions] = useState(false);
 
   const availableQuestions = questions.filter((q) =>
     formData.subject ? q.subject === formData.subject : true
@@ -219,7 +221,7 @@ function ExamForm({
   };
 
   const createExamMutation = useMutation({
-    mutationFn: (data: typeof formData) => apiRequest("POST", "/api/exams", data),
+    mutationFn: (data: typeof formData) => apiRequest("POST", "/api/exams", { ...data, assignRandomQuestions }),
     onSuccess: () => {
       toast({
         title: "Exam created",
@@ -342,6 +344,34 @@ function ExamForm({
         </div>
 
         <div className="space-y-2">
+          <Label>Question Selection Logic</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="subject-selection-logic"
+              checked={useSubjectSelectionLogic}
+              onChange={e => setUseSubjectSelectionLogic(e.target.checked)}
+              className="mr-2"
+            />
+            <Label htmlFor="subject-selection-logic">Enable: Question Bank → Select Subject → Select Questions by Subject → Sort Questions by Subject</Label>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Randomize Questions</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="assign-random-questions"
+              checked={assignRandomQuestions}
+              onChange={e => setAssignRandomQuestions(e.target.checked)}
+              className="mr-2"
+            />
+            <Label htmlFor="assign-random-questions">Assign random questions to each student</Label>
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>Select Questions *</Label>
             <div>
@@ -349,46 +379,74 @@ function ExamForm({
             </div>
           </div>
           <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-4">
-            {availableQuestions.length > 0 ? (
-              availableQuestions.map((question) => (
-                <div
-                  key={question.id}
-                  className="flex items-start gap-3 rounded-md border p-3 hover-elevate"
-                >
-                  <input
-                    type="checkbox"
-                    id={`question-${question.id}`}
-                    checked={formData.questionIds.includes(question.id)}
-                    onChange={() => toggleQuestion(question.id)}
-                    className="mt-1"
-                    data-testid={`checkbox-question-${question.id}`}
-                  />
-                  <Label
-                    htmlFor={`question-${question.id}`}
-                    className="flex-1 cursor-pointer text-sm"
+            {useSubjectSelectionLogic ? (
+              <>
+                <div className="mb-2">
+                  <Label>Filter by Subject:</Label>
+                  <select
+                    value={formData.subject}
+                    onChange={e => setFormData({ ...formData, subject: e.target.value })}
+                    className="ml-2 border rounded px-2 py-1"
                   >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {question.subject}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {question.difficulty}
-                      </Badge>
-                    </div>
-                    <p className="mt-1">{question.questionText}</p>
-                  </Label>
+                    <option value="">All Subjects</option>
+                    {Array.from(new Set(questions.map(q => q.subject))).map(subject => (
+                      <option key={subject} value={subject}>{subject}</option>
+                    ))}
+                  </select>
                 </div>
-              ))
+                {availableQuestions.length > 0 ? (
+                  availableQuestions
+                    .sort((a, b) => a.subject.localeCompare(b.subject))
+                    .map((question) => (
+                      <div key={question.id} className="flex items-start gap-3 rounded-md border p-3 hover-elevate">
+                        <input
+                          type="checkbox"
+                          id={`question-${question.id}`}
+                          checked={formData.questionIds.includes(question.id)}
+                          onChange={() => toggleQuestion(question.id)}
+                          className="mt-1"
+                          data-testid={`checkbox-question-${question.id}`}
+                        />
+                        <Label htmlFor={`question-${question.id}`} className="flex-1 cursor-pointer text-sm">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">{question.subject}</Badge>
+                            <Badge variant="outline" className="text-xs">{question.difficulty}</Badge>
+                          </div>
+                          <p className="mt-1">{question.questionText}</p>
+                        </Label>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground">No questions available{formData.subject && ` for ${formData.subject}`}</p>
+                )}
+              </>
             ) : (
-              <p className="text-center text-sm text-muted-foreground">
-                No questions available
-                {formData.subject && ` for ${formData.subject}`}
-              </p>
+              availableQuestions.length > 0 ? (
+                availableQuestions.map((question) => (
+                  <div key={question.id} className="flex items-start gap-3 rounded-md border p-3 hover-elevate">
+                    <input
+                      type="checkbox"
+                      id={`question-${question.id}`}
+                      checked={formData.questionIds.includes(question.id)}
+                      onChange={() => toggleQuestion(question.id)}
+                      className="mt-1"
+                      data-testid={`checkbox-question-${question.id}`}
+                    />
+                    <Label htmlFor={`question-${question.id}`} className="flex-1 cursor-pointer text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">{question.subject}</Badge>
+                        <Badge variant="outline" className="text-xs">{question.difficulty}</Badge>
+                      </div>
+                      <p className="mt-1">{question.questionText}</p>
+                    </Label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-sm text-muted-foreground">No questions available{formData.subject && ` for ${formData.subject}`}</p>
+              )
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {formData.questionIds.length} question(s) selected
-          </p>
+          <p className="text-sm text-muted-foreground">{formData.questionIds.length} question(s) selected</p>
         </div>
       </div>
       <DialogFooter>
