@@ -77,6 +77,7 @@ export default function AdminResults() {
                 <TableHead>Status</TableHead>
                 <TableHead>Completed</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">Print</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -136,6 +137,22 @@ export default function AdminResults() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </Link>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const printContent = `Student: ${result.studentName}\nID: ${result.studentId}\nExam: ${getExamTitle(result.examId)}\nScore: ${result.score}/${result.totalPoints}\nPercentage: ${result.percentage}%\nStatus: ${result.passed ? "Passed" : "Failed"}\nCompleted: ${new Date(result.completedAt).toLocaleString()}`;
+                          const win = window.open('', '', 'width=600,height=400');
+                          win.document.write(`<pre>${printContent}</pre>`);
+                          win.print();
+                          win.close();
+                        }}
+                        data-testid={`button-print-${result.id}`}
+                      >
+                        Print
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

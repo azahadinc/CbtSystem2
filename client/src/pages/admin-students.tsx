@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export default function AdminStudents() {
   const [studentsList, setStudentsList] = useState<{ id: string; name: string; studentId: string }[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchStudents = async () => {
     try {
@@ -20,6 +21,12 @@ export default function AdminStudents() {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  const filteredStudents = studentsList.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-8">
@@ -177,6 +184,17 @@ export default function AdminStudents() {
               <p className="text-xs text-muted-foreground">CSV format: one student per line, columns "name,studentId". Header row is optional.</p>
             </div>
 
+            {/* Search bar */}
+            <div className="mb-4">
+              <Input
+                type="text"
+                placeholder="Search students by name or ID..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full max-w-md"
+              />
+            </div>
+
             {/* Students table */}
             <div className="mt-4">
               <div className="overflow-auto">
@@ -189,7 +207,7 @@ export default function AdminStudents() {
                     </tr>
                   </thead>
                   <tbody>
-                    {studentsList.map((s) => (
+                    {filteredStudents.map((s) => (
                       <tr key={s.id} className="border-t">
                         <td className="p-2">{s.name}</td>
                         <td className="p-2">{s.studentId}</td>
