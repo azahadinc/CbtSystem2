@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import type { Result, Question, Exam } from "@shared/schema";
 
 export default function ExamResult() {
   const params = useParams<{ resultId: string }>();
+  const [isAdminResult] = useRoute("/admin/results/:resultId");
   const resultId = params.resultId;
 
   const { data: result, isLoading: resultLoading } = useQuery<Result>({
@@ -47,6 +48,8 @@ export default function ExamResult() {
 
   const correctCount = Object.values(result.correctAnswers).filter(Boolean).length;
   const totalQuestions = Object.keys(result.correctAnswers).length;
+  const backLink = isAdminResult ? "/admin/results" : "/student";
+  const backText = isAdminResult ? "Back to Results" : "Back to Exams";
 
   return (
     <div className="min-h-screen bg-background">
@@ -223,9 +226,9 @@ export default function ExamResult() {
 
           {/* Actions */}
           <div className="flex justify-center">
-            <Link href="/student">
-              <Button size="lg" data-testid="button-back-to-exams">
-                Back to Exams
+            <Link href={backLink}>
+              <Button size="lg" data-testid={isAdminResult ? "button-back-to-results" : "button-back-to-exams"}>
+                {backText}
               </Button>
             </Link>
           </div>

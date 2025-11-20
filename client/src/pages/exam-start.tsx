@@ -24,14 +24,12 @@ export default function ExamStart() {
   });
 
   const startExamMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/exam-sessions", {
+    mutationFn: () => {
+      return apiRequest<ExamSession>("POST", "/api/exam-sessions", {
         examId,
         studentName,
         studentId,
       });
-      const session = await res.json();
-      return session as ExamSession;
     },
     onSuccess: (session) => {
       if (!session || !session.id) {

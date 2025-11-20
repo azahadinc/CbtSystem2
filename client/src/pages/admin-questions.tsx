@@ -147,7 +147,7 @@ export default function AdminQuestions() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      await Promise.all(ids.map((id) => apiRequest("DELETE", `/api/questions/${id}`, {})));
+      return apiRequest("DELETE", `/api/questions`, { ids });
     },
     onSuccess: (_data, ids) => {
       queryClient.invalidateQueries({ queryKey: ["/api/questions"] });

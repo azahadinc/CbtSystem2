@@ -32,6 +32,7 @@ export interface IStorage {
   getQuestion(id: string): Promise<Question | undefined>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   deleteQuestion(id: string): Promise<void>;
+  deleteQuestions(ids: string[]): Promise<void>;
 
   // Exams
   getExams(): Promise<Exam[]>;
@@ -125,6 +126,12 @@ export class MemStorage implements IStorage {
 
   async deleteQuestion(id: string): Promise<void> {
     this.questions.delete(id);
+  }
+
+  async deleteQuestions(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      this.questions.delete(id);
+    }
   }
 
   // Exams

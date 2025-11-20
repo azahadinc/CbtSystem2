@@ -15,6 +15,7 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import AdminExams from "@/pages/admin-exams";
 import AdminQuestions from "@/pages/admin-questions";
 import AdminResults from "@/pages/admin-results";
+import AdminStudents from "@/pages/admin-students";
 
 function Router() {
   return (
@@ -45,6 +46,11 @@ function Router() {
       <Route path="/admin/results">
         <AdminLayout>
           <AdminResults />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/students">
+        <AdminLayout>
+          <AdminStudents />
         </AdminLayout>
       </Route>
       <Route path="/admin/results/:resultId" component={ExamResult} />

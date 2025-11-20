@@ -161,6 +161,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/questions", async (req, res) => {
+    try {
+      const { ids } = req.body as { ids?: string[] };
+      if (!ids || !Array.isArray(ids)) {
+        return res.status(400).json({ error: "Invalid request body" });
+      }
+      await storage.deleteQuestions(ids);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete questions" });
+    }
+  });
+
   // Exams API
   app.get("/api/exams", async (req, res) => {
     try {
