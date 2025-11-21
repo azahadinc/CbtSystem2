@@ -2,8 +2,5 @@
 > faith-immaculate-academy-cbt@1.0.0 dev
 > NODE_ENV=development tsx server/index.ts
 
-1:00:35 PM [express] serving on port 5000
-
-A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
-1:00:51 PM [vite] Pre-transform error: Transform failed with 1 error:
-/workspaces/CbtSystem2/client/src/pages/admin-questions.tsx:299:44: ERROR: The character ">" is not valid inside a JSX element
+3:36:13 PM [express] serving on port 5000
+3:36:31 PM [express] GET /api/students 200 in 7ms :: [{"id":"77faab1f-de8a-437d-bbad-d7ab39b3d674","…

@@ -97,6 +97,14 @@ export class MemStorage implements IStorage {
     return Array.from(this.questions.values());
   }
 
+  async getStudentByStudentId(studentId: string): Promise<Student | undefined> {
+    return Array.from(this.students.values()).find((s) => s.studentId === studentId);
+  }
+
+  async getStudentById(id: string): Promise<Student | undefined> {
+    return this.students.get(id);
+  }
+
   async getQuestion(id: string): Promise<Question | undefined> {
     return this.questions.get(id);
   }
@@ -223,6 +231,7 @@ export class MemStorage implements IStorage {
       endedAt: null,
       answers: insertSession.answers || {},
       currentQuestionIndex: insertSession.currentQuestionIndex || 0,
+      sessionQuestionIds: (insertSession as any).sessionQuestionIds || [],
       isCompleted: false,
       timeRemaining: null,
     };

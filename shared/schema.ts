@@ -60,7 +60,7 @@ export const insertExamSchema = createInsertSchema(exams).omit({
 }).extend({
   duration: z.number().min(1),
   passingScore: z.number().min(0).max(100),
-  questionIds: z.array(z.string()).min(1),
+  questionIds: z.array(z.string()).min(1).optional(),
   numberOfQuestionsToDisplay: z.number().optional(),
   classLevel: z.enum(classLevels),
 });

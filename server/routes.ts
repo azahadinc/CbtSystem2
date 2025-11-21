@@ -192,7 +192,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/exams", async (req, res) => {
     try {
       const { classLevel } = req.query;
-      const exams = await storage.getExams(classLevel as string | undefined);
+      // If a student is logged in, force filter to student's class level
+      let effectiveClassLevel = classLevel as string | undefined;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const s = (req as any).session;
+        if (s && s.studentId) {
+          const student = await storage.getStudentById(s.studentId);
+          if (student && (student as any).classLevel) {
+            effectiveClassLevel = (student as any).classLevel;
+          }
+        }
+      } catch (e) {
+        // ignore session errors
+      }
+      const exams = await storage.getExams(effectiveClassLevel);
       res.json(exams);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch exams" });
@@ -235,13 +249,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/exams", async (req, res) => {
     try {
       const validatedData = insertExamSchema.parse(req.body);
-      const exam = await storage.createExam(validatedData);
+
+      // If numberOfQuestionsToDisplay is provided but questionIds not provided,
+      // randomly select questions from the questions bank filtered by class level (and subject when present)
+      let questionIds = validatedData.questionIds ?? [];
+      if ((!questionIds || questionIds.length === 0) && validatedData.numberOfQuestionsToDisplay && validatedData.numberOfQuestionsToDisplay > 0) {
+        const pool = (await storage.getQuestions()).filter(q => q.classLevel === validatedData.classLevel && (!validatedData.subject || q.subject === validatedData.subject));
+        if (pool.length < validatedData.numberOfQuestionsToDisplay) {
+          return res.status(400).json({ error: `Not enough questions in bank for class level ${validatedData.classLevel}` });
+        }
+        // Shuffle pool
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        questionIds = pool.slice(0, validatedData.numberOfQuestionsToDisplay).map(q => q.id);
+      }
+
+      const examData = { ...validatedData, questionIds } as any;
+      const exam = await storage.createExam(examData);
       res.status(201).json(exam);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Failed to create exam" });
+    }
+  });
+
+  // Student login (Student Name as username, Student ID as password)
+  app.post("/api/students/login", async (req, res) => {
+    try {
+      const { username, password, studentName, studentId } = req.body as any;
+      const name = username || studentName;
+      const sid = password || studentId;
+      if (!name || !sid) return res.status(400).json({ error: "username and password required" });
+
+      const student = (await storage.getStudents()).find(s => s.name === name && s.studentId === sid);
+      if (!student) return res.status(401).json({ error: "Invalid credentials" });
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (req as any).session = (req as any).session || {};
+        // store student internal id
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (req as any).session.studentId = student.id;
+      } catch (e) {
+        // ignore session set failure
+      }
+
+      res.json({ id: student.id, name: student.name, classLevel: (student as any).classLevel });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to login" });
     }
   });
 

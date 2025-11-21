@@ -9,6 +9,7 @@ import AdminExamDetails from "@/pages/admin-exam-details";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import StudentPortal from "@/pages/student-portal";
+import StudentLogin from "@/pages/student-login";
 import ExamStart from "@/pages/exam-start";
 import ExamSession from "@/pages/exam-session";
 import ExamResult from "@/pages/exam-result";
@@ -24,6 +25,7 @@ function Router() {
       {/* Public Routes */}
       <Route path="/" component={Home} />
       <Route path="/student" component={StudentPortal} />
+      <Route path="/student/login" component={StudentLogin} />
       <Route path="/exam/:id/start" component={ExamStart} />
       <Route path="/exam/:examId/session/:sessionId" component={ExamSession} />
       <Route path="/exam/result/:resultId" component={ExamResult} />

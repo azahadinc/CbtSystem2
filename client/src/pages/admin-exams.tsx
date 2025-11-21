@@ -244,18 +244,27 @@ function ExamForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.questionIds.length === 0) {
+    // If admin requested server-side selection by setting numberOfQuestionsToDisplay (>0),
+    // allow creating the exam even if no questionIds were selected.
+    const wantsServerSelection = !!formData.numberOfQuestionsToDisplay && formData.numberOfQuestionsToDisplay > 0;
+
+    if (!wantsServerSelection && formData.questionIds.length === 0) {
       toast({
         title: "No questions selected",
-        description: "Please select at least one question for the exam.",
+        description: "Please select at least one question for the exam or set 'Number of Questions to Display'.",
         variant: "destructive",
       });
       return;
     }
 
-    const dataToSubmit = { ...formData };
-    if (dataToSubmit.numberOfQuestionsToDisplay === 0 || !dataToSubmit.numberOfQuestionsToDisplay) {
+    const dataToSubmit: any = { ...formData };
+    if (!dataToSubmit.numberOfQuestionsToDisplay) {
       delete dataToSubmit.numberOfQuestionsToDisplay;
+    }
+
+    // If using server selection, remove questionIds so server will pick from the question bank
+    if (wantsServerSelection) {
+      delete dataToSubmit.questionIds;
     }
 
     createExamMutation.mutate(dataToSubmit);
