@@ -1,1 +1,5 @@
 Faith Immaculate Academy CBT
+ss -ltnp | grep 5000
+kill <OLD_PID>
+# then restart the dev server
+npm run dev
