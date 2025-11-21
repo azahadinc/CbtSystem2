@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Clock, Flag, CheckCircle, AlertTriangle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { ExamSession, Question, Exam } from "@shared/schema";
+import type { ExamSession, Question, Exam, Result } from "@shared/schema";
 
 export default function ExamSessionPage() {
   const params = useParams<{ examId: string; sessionId: string }>();
@@ -104,9 +104,9 @@ export default function ExamSessionPage() {
     },
   });
 
-  const submitExamMutation = useMutation({
+  const submitExamMutation = useMutation<Result, unknown, void>({
     mutationFn: async () => {
-      return apiRequest("POST", `/api/exam-sessions/${sessionId}/submit`, { answers });
+      return apiRequest<Result>("POST", `/api/exam-sessions/${sessionId}/submit`, { answers });
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/exam-sessions"] });
