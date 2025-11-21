@@ -9,33 +9,25 @@ import {
   type InsertResult,
   type InsertUser,
   type User,
+  type Student,
+  type InsertStudent
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 
-// Local student types (kept here to avoid changing shared/schema for now)
-export type Student = {
-  id: string;
-  name: string;
-  studentId: string;
-};
-
-export type InsertStudent = {
-  name: string;
-  studentId: string;
-};
-
 export interface IStorage {
   // Questions
   getQuestions(): Promise<Question[]>;
   getQuestion(id: string): Promise<Question | undefined>;
+  getQuestionsByIds(ids: string[]): Promise<Question[]>;
   createQuestion(question: InsertQuestion): Promise<Question>;
+  createQuestions(insertQuestions: InsertQuestion[]): Promise<Question[]>;
   deleteQuestion(id: string): Promise<void>;
   deleteQuestions(ids: string[]): Promise<void>;
 
   // Exams
-  getExams(): Promise<Exam[]>;
+  getExams(classLevel?: string): Promise<Exam[]>;
   getExam(id: string): Promise<Exam | undefined>;
   createExam(exam: InsertExam): Promise<Exam>;
   updateExam(id: string, data: Partial<Exam>): Promise<Exam | undefined>;
@@ -60,6 +52,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   // Students
   getStudents(): Promise<Student[]>;
+  getStudentByStudentId(studentId: string): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
   createStudents(students: InsertStudent[]): Promise<Student[]>;
   updateStudent(id: string, data: Partial<Student>): Promise<Student | undefined>;
@@ -108,6 +101,17 @@ export class MemStorage implements IStorage {
     return this.questions.get(id);
   }
 
+  async getQuestionsByIds(ids: string[]): Promise<Question[]> {
+    const questions: Question[] = [];
+    for (const id of ids) {
+      const question = this.questions.get(id);
+      if (question) {
+        questions.push(question);
+      }
+    }
+    return questions;
+  }
+
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
     const id = randomUUID();
     const question: Question = {
@@ -124,6 +128,16 @@ export class MemStorage implements IStorage {
     this.questions.set(id, question);
     return question;
   }
+  
+  // Bulk create questions (useful for imports)
+  async createQuestions(insertQuestions: InsertQuestion[]): Promise<Question[]> {
+    const out: Question[] = [];
+    for (const q of insertQuestions) {
+      const created = await this.createQuestion(q);
+      out.push(created);
+    }
+    return out;
+  }
 
   async deleteQuestion(id: string): Promise<void> {
     this.questions.delete(id);
@@ -136,8 +150,12 @@ export class MemStorage implements IStorage {
   }
 
   // Exams
-  async getExams(): Promise<Exam[]> {
-    return Array.from(this.exams.values());
+  async getExams(classLevel?: string): Promise<Exam[]> {
+    let allExams = Array.from(this.exams.values());
+    if (classLevel) {
+      allExams = allExams.filter(exam => exam.classLevel === classLevel);
+    }
+    return allExams;
   }
 
   async getExam(id: string): Promise<Exam | undefined> {

@@ -53,17 +53,25 @@ export default function ExamSessionPage() {
     enabled: !!session,
   });
 
-  const { data: questions } = useQuery<Question[]>({
-    queryKey: ["/api/exams", examId, "questions"],
-    enabled: !!exam,
+  const { data: questions, isLoading: questionsLoading } = useQuery<Question[]>({
+    queryKey: ["sessionQuestions", session?.id],
+    queryFn: async () => {
+      if (!session?.sessionQuestionIds || session.sessionQuestionIds.length === 0) {
+        return [];
+      }
+      return apiRequest("POST", "/api/questions/bulk-fetch", { ids: session.sessionQuestionIds });
+    },
+    enabled: !!session?.sessionQuestionIds && session.sessionQuestionIds.length > 0,
   });
 
   useEffect(() => {
     if (session) {
       setAnswers(session.answers || {});
       setCurrentQuestionIndex(session.currentQuestionIndex || 0);
-      
-      if (exam) {
+
+      if (session.timeRemaining !== null) {
+        setTimeRemaining(session.timeRemaining);
+      } else if (exam) {
         const examDurationSeconds = exam.duration * 60;
         const elapsedSeconds = session.startedAt
           ? Math.floor((Date.now() - new Date(session.startedAt).getTime()) / 1000)
@@ -149,7 +157,7 @@ export default function ExamSessionPage() {
   const progress = questions ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
   const answeredCount = Object.keys(answers).length;
 
-  if (sessionLoading || !session || !exam || !questions) {
+  if (sessionLoading || !session || !exam || questionsLoading || !questions) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="w-full max-w-4xl space-y-4 px-4">

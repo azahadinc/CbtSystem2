@@ -210,9 +210,11 @@ function ExamForm({
     description: "",
     subject: "",
     duration: 60,
+    duration: 60,
     passingScore: 60,
     questionIds: [] as string[],
     classLevel: "JSS1",
+    numberOfQuestionsToDisplay: undefined as number | undefined,
   });
   const [useSubjectSelectionLogic, setUseSubjectSelectionLogic] = useState(false);
   const [assignRandomQuestions, setAssignRandomQuestions] = useState(false);
@@ -221,11 +223,7 @@ function ExamForm({
     (formData.subject ? q.subject === formData.subject : true) &&
     (formData.classLevel ? q.classLevel === formData.classLevel : true)
   );
-
-  const selectAllQuestions = () => {
-    setFormData((prev) => ({ ...prev, questionIds: (questions || []).map((q) => q.id) }));
-  };
-
+  
   const createExamMutation = useMutation({
     mutationFn: (data: typeof formData) => apiRequest("POST", "/api/exams", { ...data, assignRandomQuestions }),
     onSuccess: () => {
@@ -254,7 +252,13 @@ function ExamForm({
       });
       return;
     }
-    createExamMutation.mutate(formData);
+
+    const dataToSubmit = { ...formData };
+    if (dataToSubmit.numberOfQuestionsToDisplay === 0 || !dataToSubmit.numberOfQuestionsToDisplay) {
+      delete dataToSubmit.numberOfQuestionsToDisplay;
+    }
+
+    createExamMutation.mutate(dataToSubmit);
   };
 
   const toggleQuestion = (questionId: string) => {
@@ -263,6 +267,13 @@ function ExamForm({
       questionIds: prev.questionIds.includes(questionId)
         ? prev.questionIds.filter((id) => id !== questionId)
         : [...prev.questionIds, questionId],
+    }));
+  };
+
+  const selectAllQuestions = () => {
+    setFormData((prev) => ({
+      ...prev,
+      questionIds: availableQuestions.map((q) => q.id),
     }));
   };
 
@@ -281,7 +292,7 @@ function ExamForm({
             <select
               id="classLevel"
               value={formData.classLevel}
-              onChange={e => setFormData({ ...formData, classLevel: e.target.value })}
+              onChange={e => setFormData({ ...formData, classLevel: e.target.value, subject: '', questionIds: [] })}
               required
               className="border rounded px-2 py-1 w-full"
               data-testid="select-exam-class-level"
@@ -332,13 +343,13 @@ function ExamForm({
             <select
               id="subject"
               value={formData.subject}
-              onChange={e => setFormData({ ...formData, subject: e.target.value })}
+              onChange={e => setFormData({ ...formData, subject: e.target.value, questionIds: [] })}
               required
               className="border rounded px-2 py-1 w-full"
               data-testid="select-exam-subject"
             >
               <option value="">Select Subject</option>
-              {Array.from(new Set(questions.map(q => q.subject))).map(subject => (
+              {Array.from(new Set(questions.filter(q => q.classLevel === formData.classLevel).map(q => q.subject))).map(subject => (
                 <option key={subject} value={subject}>{subject}</option>
               ))}
             </select>
@@ -360,20 +371,39 @@ function ExamForm({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="passingScore">Passing Score (%) *</Label>
-          <Input
-            id="passingScore"
-            type="number"
-            min="0"
-            max="100"
-            value={formData.passingScore}
-            onChange={(e) =>
-              setFormData({ ...formData, passingScore: parseInt(e.target.value) })
-            }
-            required
-            data-testid="input-exam-passing-score"
-          />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="passingScore">Passing Score (%) *</Label>
+            <Input
+              id="passingScore"
+              type="number"
+              min="0"
+              max="100"
+              value={formData.passingScore}
+              onChange={(e) =>
+                setFormData({ ...formData, passingScore: parseInt(e.target.value) })
+              }
+              required
+              data-testid="input-exam-passing-score"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="numberOfQuestionsToDisplay">Number of Questions to Display</Label>
+            <Input
+              id="numberOfQuestionsToDisplay"
+              type="number"
+              min="0"
+              placeholder={`Defaults to all ${formData.questionIds.length} selected questions`}
+              value={formData.numberOfQuestionsToDisplay}
+              onChange={(e) =>
+                setFormData({ ...formData, numberOfQuestionsToDisplay: e.target.value ? parseInt(e.target.value) : undefined })
+              }
+              data-testid="input-exam-questions-to-display"
+            />
+            <p className="text-sm text-muted-foreground">
+              If left blank or 0, all selected questions will be used. Otherwise, a random selection of this number of questions will be presented to the student from the question bank.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -406,7 +436,7 @@ function ExamForm({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label>Select Questions *</Label>
+            <Label>Select Questions * ({availableQuestions.length} available)</Label>
             <div>
               <Button variant="ghost" size="sm" onClick={selectAllQuestions} data-testid="button-select-all-questions">Select All</Button>
             </div>
@@ -450,7 +480,7 @@ function ExamForm({
                       </div>
                     ))
                 ) : (
-                  <p className="text-center text-sm text-muted-foreground">No questions available{formData.subject && ` for ${formData.subject}`}</p>
+                  <p className="text-center text-sm text-muted-foreground">No questions available for the selected Class Level and Subject.</p>
                 )}
               </>
             ) : (
@@ -475,7 +505,7 @@ function ExamForm({
                   </div>
                 ))
               ) : (
-                <p className="text-center text-sm text-muted-foreground">No questions available{formData.subject && ` for ${formData.subject}`}</p>
+                <p className="text-center text-sm text-muted-foreground">No questions available for the selected Class Level and Subject.</p>
               )
             )}
           </div>
@@ -494,3 +524,4 @@ function ExamForm({
     </form>
   );
 }
+

@@ -174,10 +174,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk fetch questions by IDs
+  app.post("/api/questions/bulk-fetch", async (req, res) => {
+    try {
+      const { ids } = req.body as { ids?: string[] };
+      if (!ids || !Array.isArray(ids)) {
+        return res.status(400).json({ error: "Invalid request body: 'ids' array is required." });
+      }
+      const questions = await storage.getQuestionsByIds(ids);
+      res.json(questions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch questions by IDs" });
+    }
+  });
+
   // Exams API
   app.get("/api/exams", async (req, res) => {
     try {
-      const exams = await storage.getExams();
+      const { classLevel } = req.query;
+      const exams = await storage.getExams(classLevel as string | undefined);
       res.json(exams);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch exams" });
@@ -267,7 +282,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/exam-sessions", async (req, res) => {
     try {
       const validatedData = insertExamSessionSchema.parse(req.body);
-      const session = await storage.createExamSession(validatedData);
+      const exam = await storage.getExam(validatedData.examId);
+
+      if (!exam) {
+        return res.status(404).json({ error: "Exam not found" });
+      }
+
+      let sessionQuestionIds = [...exam.questionIds];
+
+      // Shuffle the array
+      for (let i = sessionQuestionIds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [sessionQuestionIds[i], sessionQuestionIds[j]] = [sessionQuestionIds[j], sessionQuestionIds[i]];
+      }
+
+      if (exam.numberOfQuestionsToDisplay && exam.numberOfQuestionsToDisplay > 0 && exam.numberOfQuestionsToDisplay < sessionQuestionIds.length) {
+        sessionQuestionIds = sessionQuestionIds.slice(0, exam.numberOfQuestionsToDisplay);
+      }
+      
+      const sessionData = {
+        ...validatedData,
+        sessionQuestionIds,
+      }
+
+      const session = await storage.createExamSession(sessionData);
       res.status(201).json(session);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -308,9 +346,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Exam not found" });
       }
 
+      const questionIdsToGrade = session.sessionQuestionIds || exam.questionIds;
+
       // Get all questions for this exam
       const questions: Question[] = [];
-      for (const questionId of exam.questionIds) {
+      for (const questionId of questionIdsToGrade) {
         const question = await storage.getQuestion(questionId);
         if (question) {
           questions.push(question);
@@ -321,8 +361,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const answers = req.body.answers || session.answers || {};
       const correctAnswers: Record<string, boolean> = {};
       let score = 0;
+      let sessionTotalPoints = 0;
 
       for (const question of questions) {
+        sessionTotalPoints += question.points;
         const studentAnswer = answers[question.id];
         const isCorrect =
           studentAnswer &&
@@ -334,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const percentage = Math.round((score / exam.totalPoints) * 100);
+      const percentage = sessionTotalPoints > 0 ? Math.round((score / sessionTotalPoints) * 100) : 0;
       const passed = percentage >= exam.passingScore;
 
       // Mark session as completed
@@ -351,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         studentName: session.studentName,
         studentId: session.studentId,
         score,
-        totalPoints: exam.totalPoints,
+        totalPoints: sessionTotalPoints,
         percentage,
         passed,
         answers,

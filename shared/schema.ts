@@ -47,6 +47,7 @@ export const exams = pgTable("exams", {
   totalPoints: integer("total_points").notNull(),
   passingScore: integer("passing_score").notNull(),
   questionIds: jsonb("question_ids").$type<string[]>().notNull(),
+  numberOfQuestionsToDisplay: integer("number_of_questions_to_display"),
   classLevel: text("class_level").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
@@ -60,6 +61,7 @@ export const insertExamSchema = createInsertSchema(exams).omit({
   duration: z.number().min(1),
   passingScore: z.number().min(0).max(100),
   questionIds: z.array(z.string()).min(1),
+  numberOfQuestionsToDisplay: z.number().optional(),
   classLevel: z.enum(classLevels),
 });
 
@@ -78,6 +80,7 @@ export const examSessions = pgTable("exam_sessions", {
   currentQuestionIndex: integer("current_question_index").notNull().default(0),
   isCompleted: boolean("is_completed").notNull().default(false),
   timeRemaining: integer("time_remaining"), // in seconds
+  sessionQuestionIds: jsonb("session_question_ids").$type<string[]>(),
 });
 
 export const insertExamSessionSchema = createInsertSchema(examSessions).omit({
@@ -88,6 +91,7 @@ export const insertExamSessionSchema = createInsertSchema(examSessions).omit({
 }).extend({
   answers: z.record(z.string()).default({}),
   currentQuestionIndex: z.number().default(0),
+  sessionQuestionIds: z.array(z.string()).optional(),
 });
 
 export type InsertExamSession = z.infer<typeof insertExamSessionSchema>;

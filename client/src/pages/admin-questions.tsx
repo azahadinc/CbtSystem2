@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Dialog,
   DialogContent,
@@ -179,6 +185,23 @@ export default function AdminQuestions() {
   const filteredQuestions = questions?.filter((q) =>
     filterSubject && filterSubject !== "__all__" ? q.subject === filterSubject : true
   );
+
+  const questionsBySubject = filteredQuestions
+    ? filteredQuestions.reduce((acc, question) => {
+        const subject = question.subject || "Uncategorized";
+        if (!acc[subject]) {
+          acc[subject] = {
+            questions: [],
+            classLevels: new Set<string>(),
+          };
+        }
+        acc[subject].questions.push(question);
+        if (question.classLevel) {
+          acc[subject].classLevels.add(question.classLevel);
+        }
+        return acc;
+      }, {} as Record<string, { questions: Question[]; classLevels: Set<string> }>)
+    : {};
 
   return (
     <div className="space-y-8">
@@ -477,87 +500,99 @@ export default function AdminQuestions() {
           ))}
         </div>
       ) : filteredQuestions && filteredQuestions.length > 0 ? (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <input
-                    type="checkbox"
-                    aria-label="select-all-questions"
-                    checked={filteredQuestions && selectedIds.size === (filteredQuestions?.length || 0) && filteredQuestions.length > 0}
-                    onChange={(e) => {
-                      if (!filteredQuestions) return;
-                      if (e.currentTarget.checked) {
-                        setSelectedIds(new Set(filteredQuestions.map((q) => q.id)));
-                      } else {
-                        setSelectedIds(new Set());
-                      }
-                    }}
-                  />
-                </TableHead>
-                <TableHead className="w-1/2">Question</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Difficulty</TableHead>
-                <TableHead>Points</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredQuestions.map((question) => (
-                <TableRow key={question.id} data-testid={`row-question-${question.id}`}>
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      aria-label={`select-question-${question.id}`}
-                      checked={selectedIds.has(question.id)}
-                      onChange={(e) => {
-                        const next = new Set(selectedIds);
-                        if (e.currentTarget.checked) next.add(question.id);
-                        else next.delete(question.id);
-                        setSelectedIds(next);
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {question.questionText}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{question.questionType}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{question.subject}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        question.difficulty === "easy"
-                          ? "default"
-                          : question.difficulty === "medium"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {question.difficulty}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{question.points}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteQuestionMutation.mutate(question.id)}
-                      data-testid={`button-delete-${question.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+        <Accordion type="multiple" className="w-full">
+          {Object.entries(questionsBySubject).map(([subject, { questions: subjectQuestions, classLevels }]) => (
+            <AccordionItem value={subject} key={subject} className="mb-4 rounded-lg border bg-card">
+              <AccordionTrigger className="p-6 text-left hover:no-underline">
+                  <div className="flex w-full flex-col items-start">
+                      <h3 className="text-lg font-semibold text-card-foreground">{subject}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                          Class Levels: {Array.from(classLevels).join(', ')}
+                      </p>
+                  </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-6 pt-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          aria-label={`select-all-${subject}`}
+                          checked={subjectQuestions.length > 0 && subjectQuestions.every(q => selectedIds.has(q.id))}
+                          onChange={(e) => {
+                            const newSelectedIds = new Set(selectedIds);
+                            const subjectQuestionIds = subjectQuestions.map(q => q.id);
+                            if (e.currentTarget.checked) {
+                              subjectQuestionIds.forEach(id => newSelectedIds.add(id));
+                            } else {
+                              subjectQuestionIds.forEach(id => newSelectedIds.delete(id));
+                            }
+                            setSelectedIds(newSelectedIds);
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead className="w-1/2">Question</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Difficulty</TableHead>
+                      <TableHead>Points</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subjectQuestions.map((question) => (
+                      <TableRow key={question.id} data-testid={`row-question-${question.id}`}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            aria-label={`select-question-${question.id}`}
+                            checked={selectedIds.has(question.id)}
+                            onChange={(e) => {
+                              const next = new Set(selectedIds);
+                              if (e.currentTarget.checked) next.add(question.id);
+                              else next.delete(question.id);
+                              setSelectedIds(next);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {question.questionText}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{question.questionType}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              question.difficulty === "easy"
+                                ? "default"
+                                : question.difficulty === "medium"
+                                ? "secondary"
+                                : "destructive"
+                            }
+                          >
+                            {question.difficulty}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{question.points}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteQuestionMutation.mutate(question.id)}
+                            data-testid={`button-delete-${question.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center py-12 text-center">
