@@ -119,6 +119,7 @@ export class MemStorage implements IStorage {
       options: insertQuestion.options ?? null,
       correctAnswer: insertQuestion.correctAnswer,
       points: insertQuestion.points,
+      classLevel: (insertQuestion as any).classLevel ?? null,
     };
     this.questions.set(id, question);
     return question;
@@ -164,6 +165,7 @@ export class MemStorage implements IStorage {
       totalPoints,
       passingScore: insertExam.passingScore,
       questionIds: insertExam.questionIds,
+      classLevel: (insertExam as any).classLevel ?? null,
       isActive: true,
       createdAt: new Date(),
     };

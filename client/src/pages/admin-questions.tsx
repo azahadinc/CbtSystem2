@@ -50,6 +50,7 @@ export default function AdminQuestions() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
   const [csvClassLevel, setCsvClassLevel] = useState<string>("");
+  const [csvSubject, setCsvSubject] = useState<string>("");
   const [showClassLevelDialog, setShowClassLevelDialog] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ uploaded: number; total: number } | null>(null);
 
@@ -72,7 +73,7 @@ export default function AdminQuestions() {
       const headerParts = lines[0].split(",").map((p) => p.trim());
       const hasHeader = headerParts.some((h) => /question/i.test(h) || /questionText/i.test(h) || /question_text/i.test(h));
       const startIndex = hasHeader ? 1 : 0;
-      const cols = hasHeader ? headerParts : ["questionText","questionType","subject","difficulty","options","correctAnswer","points"];
+      const cols = hasHeader ? headerParts : ["questionText","questionType","difficulty","options","correctAnswer","points"];
       for (let i = startIndex; i < lines.length; i++) {
         const parts = lines[i].split(",").map((p) => p.trim());
         if (parts.length === 0) continue;
@@ -139,10 +140,9 @@ export default function AdminQuestions() {
     } else {
       alert(`Uploaded ${uploaded} questions`);
     }
-        const [csvClassLevel, setCsvClassLevel] = useState<string>("");
-        const [csvSubject, setCsvSubject] = useState<string>("");
     setPreviewRows([]);
     setCsvClassLevel("");
+    setCsvSubject("");
     setShowClassLevelDialog(false);
   };
 
@@ -270,14 +270,14 @@ export default function AdminQuestions() {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm">Columns (header optional):</p>
-            <pre className="text-xs bg-muted p-2 rounded">questionText,questionType,subject,difficulty,options,correctAnswer,points</pre>
+            <pre className="text-xs bg-muted p-2 rounded">questionText,questionType,difficulty,options,correctAnswer,points</pre>
             <p className="text-sm">Notes:</p>
             <ul className="list-disc ml-6 text-sm">
               <li><b>questionText</b> — required.</li>
               <li><b>questionType</b> — required: <code>multiple-choice</code>, <code>true-false</code>, <code>short-answer</code>.</li>
               <li><b>options</b> — for multiple-choice: JSON array string or pipe-separated (e.g. <code>A|B|C|D</code>).</li>
               <li><b>correctAnswer</b> — required.</li>
-              <li><b>points</b> — integer &gt; 0, defaults to 1.</li>
+              <li><b>points</b> — integer greater than 0, defaults to 1.</li>
             </ul>
             <div className="pt-2">
               <a href="/questions-template.csv" download>
@@ -298,36 +298,48 @@ export default function AdminQuestions() {
             <DialogHeader>
               <DialogTitle>Select Class Level for Uploaded Questions</DialogTitle>
               <DialogDescription>
-                Please select the class level that applies to all questions in this CSV upload.
+                Please select the class level and subject that applies to all questions in this CSV upload.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <Label htmlFor="csv-class-level">Class Level *</Label>
-              <select
-                id="csv-class-level"
-                value={csvClassLevel}
-                onChange={e => setCsvClassLevel(e.target.value)}
-                className="border rounded px-2 py-1 w-full"
-              >
-                <option value="">Select Class Level</option>
-                <option value="JSS1">JSS1</option>
-                <option value="JSS2">JSS2</option>
-                <option value="JSS3">JSS3</option>
-                <option value="SS1">SS1</option>
-                <option value="SS2">SS2</option>
-                <option value="SS3">SS3</option>
-                <option value="WAEC">WAEC</option>
-                <option value="NECO">NECO</option>
-                <option value="GCE WAEC">GCE WAEC</option>
-                <option value="GCE NECO">GCE NECO</option>
-              </select>
+              <div>
+                <Label htmlFor="csv-class-level">Class Level *</Label>
+                <select
+                  id="csv-class-level"
+                  value={csvClassLevel}
+                  onChange={e => setCsvClassLevel(e.target.value)}
+                  className="border rounded px-2 py-1 w-full mt-1"
+                >
+                  <option value="">Select Class Level</option>
+                  <option value="JSS1">JSS1</option>
+                  <option value="JSS2">JSS2</option>
+                  <option value="JSS3">JSS3</option>
+                  <option value="SS1">SS1</option>
+                  <option value="SS2">SS2</option>
+                  <option value="SS3">SS3</option>
+                  <option value="WAEC">WAEC</option>
+                  <option value="NECO">NECO</option>
+                  <option value="GCE WAEC">GCE WAEC</option>
+                  <option value="GCE NECO">GCE NECO</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="csv-subject">Subject *</Label>
+                <Input
+                  id="csv-subject"
+                  value={csvSubject}
+                  onChange={e => setCsvSubject(e.target.value)}
+                  placeholder="e.g., Mathematics"
+                  className="mt-1"
+                />
+              </div>
               <DialogFooter>
                 <Button
                   onClick={() => {
-                    if (!csvClassLevel) return alert("Please select a class level.");
+                    if (!csvClassLevel || !csvSubject) return alert("Please select a class level and enter a subject.");
                     setShowClassLevelDialog(false);
                   }}
-                  disabled={!csvClassLevel}
+                  disabled={!csvClassLevel || !csvSubject}
                 >
                   Confirm
                 </Button>
@@ -340,11 +352,14 @@ export default function AdminQuestions() {
       {/* Preview rows and upload controls */}
       {previewRows && previewRows.length > 0 && !showClassLevelDialog && (
         <Card>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-medium">CSV Preview ({previewRows.length} rows)</h3>
                 <p className="text-sm text-muted-foreground">Review parsed rows below before uploading. Invalid rows will be reported by the server.</p>
+                <div className="text-sm font-medium mt-2">
+                  Class Level: <Badge>{csvClassLevel}</Badge>, Subject: <Badge>{csvSubject}</Badge>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={() => setPreviewRows([])}>
@@ -361,7 +376,6 @@ export default function AdminQuestions() {
                   <tr className="text-left text-xs text-muted-foreground">
                     <th className="p-2">Question</th>
                     <th className="p-2">Type</th>
-                    <th className="p-2">Subject</th>
                     <th className="p-2">Difficulty</th>
                     <th className="p-2">Points</th>
                     <th className="p-2">Actions</th>
@@ -374,12 +388,11 @@ export default function AdminQuestions() {
                       if (!row.questionText || String(row.questionText).trim() === "") errors.push("questionText required");
                       const types = ["multiple-choice", "true-false", "short-answer"];
                       if (!types.includes(row.questionType)) errors.push("questionType invalid");
-                      if (!row.subject || String(row.subject).trim() === "") errors.push("subject required");
                       const diffs = ["easy", "medium", "hard"];
                       if (!diffs.includes(row.difficulty)) errors.push("difficulty invalid");
                       if (!row.correctAnswer && row.correctAnswer !== 0) errors.push("correctAnswer required");
                       if (row.questionType === "multiple-choice") {
-                        if (!Array.isArray(row.options) || row.options.length < 2) errors.push("options must be an array with >=2 items");
+                        if (!Array.isArray(row.options) || row.options.length < 2) errors.push("options must be an array with at least 2 items");
                       }
                       if (row.points && !(Number(row.points) > 0)) errors.push("points must be a positive number");
                       return { valid: errors.length === 0, errors };
@@ -399,9 +412,6 @@ export default function AdminQuestions() {
                             <option value="true-false">true-false</option>
                             <option value="short-answer">short-answer</option>
                           </select>
-                        </td>
-                        <td className="p-2">
-                          <input className="w-full rounded border px-2 py-1" value={r.subject || ''} onChange={(e) => { const copy = [...previewRows]; copy[idx] = { ...copy[idx], subject: e.target.value }; setPreviewRows(copy); }} />
                         </td>
                         <td className="p-2">
                           <select className="rounded border px-2 py-1" value={r.difficulty || 'medium'} onChange={(e) => { const copy = [...previewRows]; copy[idx] = { ...copy[idx], difficulty: e.target.value }; setPreviewRows(copy); }}>
