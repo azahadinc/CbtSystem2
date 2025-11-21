@@ -104,10 +104,12 @@ export default function AdminQuestions() {
       alert("No rows to upload");
       return;
     }
-    // Assign selected class level to all rows
-    if (csvClassLevel) {
-      rows = rows.map(row => ({ ...row, classLevel: csvClassLevel }));
+    // Assign selected class level and subject to all rows
+    if (!csvClassLevel || !csvSubject) {
+      alert("Please select both class level and subject before uploading.");
+      return;
     }
+    rows = rows.map(row => ({ ...row, classLevel: csvClassLevel, subject: csvSubject }));
     const chunkSize = opts?.chunkSize ?? 100;
     let uploaded = 0;
     setUploadProgress({ uploaded, total: rows.length });
@@ -137,7 +139,8 @@ export default function AdminQuestions() {
     } else {
       alert(`Uploaded ${uploaded} questions`);
     }
-    queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
+        const [csvClassLevel, setCsvClassLevel] = useState<string>("");
+        const [csvSubject, setCsvSubject] = useState<string>("");
     setPreviewRows([]);
     setCsvClassLevel("");
     setShowClassLevelDialog(false);
