@@ -1,0 +1,83 @@
+Deploying a modern React web application on **XAMPP** is certainly possible, but it requires a slightly different approach than deploying traditional PHP or static sites because XAMPP's primary role is serving content via the **Apache** web server.
+
+Here is the step-by-step process for deploying your React application (the compiled client-side code) on XAMPP.
+
+## 1\. ⚙️ Compile Your React Application
+
+First, ensure you have run the build process successfully. This creates the production-ready static files.
+
+1.  Open your terminal in the root of your project.
+2.  Run the build command (as you did previously):
+    ```bash
+    npm run build
+    ```
+    This command generates the optimized files in your **`dist/public`** directory. This folder is what we will deploy.
+
+-----
+
+## 2\. 📁 Copy Files to the XAMPP Directory
+
+XAMPP uses the **`htdocs`** folder within its installation directory as the root for all web files served by Apache.
+
+1.  **Locate XAMPP's `htdocs` folder:**
+      * **Windows:** Usually `C:\xampp\htdocs\`
+      * **macOS:** Usually `/Applications/XAMPP/htdocs/`
+2.  **Create a Project Folder:** Inside `htdocs`, create a new folder for your application (e.g., `my-cbt-app`).
+      * Example Path: `C:\xampp\htdocs\my-cbt-app\`
+3.  **Copy the Build:** Copy **ALL** the contents of your React project's **`dist/public`** folder into this new XAMPP folder (`my-cbt-app`).
+
+-----
+
+## 3\. 📝 Configure XAMPP for React Router (Crucial Step)
+
+Modern React applications use **client-side routing** (like React Router), which means navigating between pages (e.g., `/admin` or `/user`) doesn't require the server to load a new file. The server only sees the request for the initial **`index.html`**.
+
+If a user tries to access a route directly (e.g., they type `http://localhost/my-cbt-app/admin` into the browser) or refreshes the page, Apache will look for a physical file named `admin` and return a **404 Not Found** error because only `index.html` exists.
+
+To fix this, you must configure Apache to **rewrite all unknown requests** to your application's root `index.html`.
+
+### A. Create an `.htaccess` File
+
+1.  In the XAMPP project folder where you copied your files (e.g., `C:\xampp\htdocs\my-cbt-app\`), create a new file named **`.htaccess`** (note the leading dot).
+
+2.  Paste the following configuration into the file:
+
+    ```apache
+    <IfModule mod_rewrite.c>
+      RewriteEngine On
+      RewriteBase /my-cbt-app/  # !!! IMPORTANT: Change this to your folder name !!!
+      RewriteRule ^index\.html$ - [L]
+      RewriteCond %{REQUEST_FILENAME} !-f
+      RewriteCond %{REQUEST_FILENAME} !-d
+      RewriteRule . /my-cbt-app/index.html [L] # !!! IMPORTANT: Change this to your folder name !!!
+    </IfModule>
+    ```
+
+    **Note:** If you install your React app directly into `htdocs` (not a subdirectory), change the two lines above from `/my-cbt-app/` to just `/`.
+
+### B. Enable `mod_rewrite`
+
+1.  Open your **XAMPP Control Panel**.
+2.  Click the **"Config"** button next to **Apache**, and select **`httpd.conf`** (Apache's configuration file).
+3.  Search for the following line:
+    ```apache
+    #LoadModule rewrite_module modules/mod_rewrite.so
+    ```
+4.  If there is a `#` in front of it, **remove the `#`** to uncomment the line and enable the rewrite module.
+5.  Save and close `httpd.conf`.
+6.  **Restart Apache** in the XAMPP Control Panel by clicking "Stop" and then "Start" next to Apache.
+
+-----
+
+## 4\. 🔗 Access Your Application
+
+1.  Make sure **Apache** is running in your XAMPP Control Panel.
+2.  Open your web browser and navigate to the following URL:
+    ```
+    http://localhost/my-cbt-app/
+    ```
+    (Replace `my-cbt-app` with the folder name you chose.)
+
+Your React application should now load, and the routing should work correctly.
+
+Would you like to know how to set up your **Node.js server** (`dist/index.js`) to run alongside XAMPP for API access?
