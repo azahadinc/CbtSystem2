@@ -2,6 +2,4 @@
 > faith-immaculate-academy-cbt@1.0.0 dev
 > NODE_ENV=development tsx server/index.ts
 
-3:36:13 PM [express] serving on port 5000
-3:36:31 PM [express] GET /api/students 200 in 7ms :: [{"id":"77faab1f-de8a-437d-bbad-d7ab39b3d674","…
-3:55:20 PM [express] HEAD /api/exams 200 in 8ms :: []
+4:00:10 PM [express] serving on port 5000
